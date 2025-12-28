@@ -59,24 +59,31 @@ canvas{
   display:block;
 }
 
-/* Puntero fijo INVERTIDO (punta apuntando hacia el centro) */
+/* Puntero fijo INVERTIDO (SVG). La punta entra hacia el centro. */
 .pointer{
   position:absolute;
   left:50%;
-  /* Colocamos la base del triángulo levemente por encima del borde superior
-     y la punta entra unos px dentro de la ruleta para señalar claramente el segmento */
-  top: -6px; /* ajusta este valor si quieres que entre más o menos */
-  transform:translateX(-50%);
-  width:0;
-  height:0;
-  /* triángulo con punta hacia abajo (apunta al centro) */
-  border-left:14px solid transparent;
-  border-right:14px solid transparent;
-  border-bottom:28px solid var(--accent); /* punta hacia abajo */
-  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45));
-  z-index:5;
-  /* pequeña línea base para que el triángulo parezca integrado */
-  box-shadow: 0 1px 0 rgba(0,0,0,0.2);
+  /* Ajusta top para controlar cuánto entra la punta:
+     - valores positivos (ej. 2px, 6px) hacen que la punta entre más hacia el centro.
+     - valores negativos la dejan más afuera.
+     Aquí colocamos -2px por defecto y usaremos animación para el rebote */
+  top: -2px;
+  transform:translateX(-50%) translateY(0);
+  z-index:6;
+  pointer-events:none;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));
+  transition: transform 220ms cubic-bezier(.2,.9,.3,1);
+}
+
+/* Clase que se añade para el rebote (punta se mueve hacia adentro y vuelve) */
+.pointer.bounce {
+  animation: pointerBounce 700ms cubic-bezier(.2,.9,.3,1);
+}
+@keyframes pointerBounce {
+  0%   { transform: translateX(-50%) translateY(0); }
+  35%  { transform: translateX(-50%) translateY(10px); } /* entra hacia el centro */
+  60%  { transform: translateX(-50%) translateY(3px); }
+  100% { transform: translateX(-50%) translateY(0); }
 }
 
 /* Button */
@@ -124,4 +131,15 @@ canvas{
   cursor:pointer;
   background:#0284c7;
   color:white;
+}
+
+/* Canvas para confetti se crea/posiciona desde JS; su z-index debe estar entre la rueda y el modal */
+.confetti-canvas{
+  position:fixed;
+  left:0;
+  top:0;
+  width:100vw;
+  height:100vh;
+  pointer-events:none;
+  z-index:50;
 }
