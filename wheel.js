@@ -32,7 +32,7 @@ function drawWheel(){
   ctx.clearRect(0,0,size,size);
   ctx.save();
 
-  // Para que el primer segmento quede en el "arriba" (puntero), aplicamos -90deg
+  // Para que el primer segmento comience en el "arriba" (puntero), aplicamos -90deg
   const offset = -Math.PI / 2;
 
   for(let i=0;i<len;i++){
@@ -50,7 +50,7 @@ function drawWheel(){
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Texto del segmento
+    // Texto del segmento (rotado para quedar legible)
     ctx.save();
     ctx.translate(cx, cy);
     const textAngle = start + angle / 2;
@@ -70,6 +70,30 @@ function drawWheel(){
   ctx.restore();
 }
 
+// Calcula índice del segmento apuntado por el puntero dada la rotación final (grados)
+function computeIndexFromRotation(finalNormalizedDeg) {
+  // finalNormalizedDeg: rotación aplicada al rotor en grados (0-360)
+  const len = prizes.length;
+  const segmentDeg = 360 / len;
+  // Para cada segmento calculamos la posición angular de su centro después de aplicar la rotación.
+  // Los centros iniciales (sin rotación) están a: i*segmentDeg + segmentDeg/2 (medidos desde la "arriba", en sentido horario).
+  // Después de rotar la rueda en sentido horario finalNormalizedDeg, el centro se mueve a:
+  // centerAngle = (i*segmentDeg + segmentDeg/2 + finalNormalizedDeg) % 360
+  // Queremos el i cuyo centerAngle esté más cerca de 0 (la punta superior).
+  let bestIdx = 0;
+  let bestDist = 1e9;
+  for (let i = 0; i < len; i++) {
+    const center = (i * segmentDeg + segmentDeg / 2 + finalNormalizedDeg) % 360;
+    // distancia mínima angular al 0 (teniendo en cuenta envoltura 360)
+    const dist = Math.min(Math.abs(center - 0), 360 - Math.abs(center - 0));
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
+}
+
 // Función para girar
 function spin(){
   if(isSpinning) return;
@@ -77,33 +101,39 @@ function spin(){
   spinBtn.disabled = true;
 
   const len = prizes.length;
-  const selectedIndex = Math.floor(Math.random() * len);
-
-  // Cantidad de rotaciones extra (vueltas completas) para que la animación se vea bien
-  const extraRotations = 5 + Math.floor(Math.random()*3); // 5 a 7 vueltas
   const segmentDeg = 360 / len;
 
-  // Queremos que el centro del segmento seleccionado quede justo debajo del puntero (arriba)
-  // Recordar que dibujamos con offset -90deg, por eso segmento 0 queda arriba.
-  const stopAt = 360 * extraRotations + selectedIndex * segmentDeg + segmentDeg / 2;
+  // Opciones de giro: vueltas completas + offset aleatorio para que no siempre caiga en centros exactos
+  const extraRotations = 5 + Math.floor(Math.random() * 3); // 5 a 7 vueltas
+  const randomExtraDeg = Math.random() * 360; // cualquier posición dentro de la vuelta
+  const stopAt = 360 * extraRotations + randomExtraDeg;
 
   // Aplicar la rotación al rotor (no al marco)
   rotor.style.transition = 'transform 5s cubic-bezier(.14,.99,.38,1)';
   rotor.style.transform = `rotate(${stopAt}deg)`;
 
-  // Cuando termina la transición, mostramos el resultado
+  // Cuando termina la transición, determinamos qué segmento quedó apuntado y mostramos modal
   const onEnd = () => {
-    rotor.style.transition = ''; // limpiar transición
-    // Normalizar el ángulo para mantener valor pequeño
+    // Normalizar el ángulo final a [0,360)
     const finalNormalized = stopAt % 360;
-    rotor.style.transform = `rotate(${finalNormalized}deg)`;
-    // Mostrar modal con premio
+    // Acotar a 0..360
+    const finalNorm360 = (finalNormalized + 360) % 360;
+
+    // calcular el índice real que quedó apuntado
+    const winnerIndex = computeIndexFromRotation(finalNorm360);
+
+    // Normalizamos transform a un valor pequeño para evitar transforms con números grandes
+    rotor.style.transition = '';
+    rotor.style.transform = `rotate(${finalNorm360}deg)`;
+
+    // Mostrar modal con premio correspondiente
     setTimeout(()=> {
-      prizeText.textContent = prizes[selectedIndex];
+      prizeText.textContent = prizes[winnerIndex];
       modal.classList.remove('hidden');
       isSpinning = false;
       spinBtn.disabled = false;
-    }, 300); // pequeño delay para asegurar suavidad
+    }, 150); // pequeño delay para suavidad
+
     rotor.removeEventListener('transitionend', onEnd);
   };
 
