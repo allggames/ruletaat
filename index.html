@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ruleta de Premios</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Ruleta de Premios</h1>
+
+    <div class="wheel-area">
+      <div id="wheel" class="wheel-outer">
+        <canvas id="wheel-canvas" width="500" height="500"></canvas>
+        <div class="pointer"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="spin-btn" class="spin-btn">Girar</button>
+    </div>
+
+    <!-- Modal premio -->
+    <div id="prize-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2>¡Felicidades!</h2>
+        <p id="prize-text"></p>
+        <button id="close-modal">Cerrar</button>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="wheel.js"></script>
+</body>
+</html>
