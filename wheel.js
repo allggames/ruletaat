@@ -12,12 +12,12 @@ const prizes = [
 
 const canvas = document.getElementById('wheel-canvas');
 const ctx = canvas.getContext('2d');
-// rotor es el que gira; wheel (outer) es el marco que queda fijo (contiene el puntero)
 const rotor = document.getElementById('wheel-rotor');
 const spinBtn = document.getElementById('spin-btn');
 const modal = document.getElementById('prize-modal');
 const prizeText = document.getElementById('prize-text');
 const closeModal = document.getElementById('close-modal');
+const pointer = document.querySelector('.pointer');
 
 const size = Math.min(canvas.width, canvas.height);
 const cx = size / 2;
@@ -87,6 +87,102 @@ function computeIndexFromRotation(finalNormalizedDeg) {
   return bestIdx;
 }
 
+// ---- Confetti simple con canvas ----
+function launchConfettiAt(x, y, opts = {}) {
+  const count = opts.count || 80;
+  const duration = opts.duration || 2200;
+
+  // Crear canvas full-screen
+  const c = document.createElement('canvas');
+  c.className = 'confetti-canvas';
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
+  document.body.appendChild(c);
+  const C = c.getContext('2d');
+
+  // partículas
+  const colors = ['#ff4757','#ff6b81','#ffd166','#06d6a0','#118ab2','#845EC2'];
+  const particles = [];
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x: x + (Math.random()-0.5)*80,
+      y: y + (Math.random()-0.5)*40,
+      vx: (Math.random()-0.5) * 8,
+      vy: - (2 + Math.random()*6),
+      size: 6 + Math.random()*8,
+      color: colors[Math.floor(Math.random()*colors.length)],
+      rot: Math.random()*360,
+      vrot: (Math.random()-0.5)*20,
+      life: 0,
+      ttl: 60 + Math.random()*60
+    });
+  }
+
+  let rafId;
+  function update() {
+    C.clearRect(0,0,c.width,c.height);
+    for (let p of particles) {
+      p.vy += 0.25; // gravedad
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vrot;
+      p.life++;
+      C.save();
+      C.translate(p.x, p.y);
+      C.rotate(p.rot * Math.PI / 180);
+      C.fillStyle = p.color;
+      C.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+      C.restore();
+    }
+    // remover las que ya se pasaron
+    if (particles.every(p => p.life > p.ttl)) {
+      cancelAnimationFrame(rafId);
+      c.remove();
+      return;
+    }
+    rafId = requestAnimationFrame(update);
+  }
+
+  update();
+  // remover tras duration por si acaso
+  setTimeout(()=> { if (c.parentNode) c.remove(); }, duration + 300);
+}
+
+// ---- Sonido breve con WebAudio ----
+function playWinSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+
+    // Dos osciladores en intervalo mayor para sonar "festivo"
+    const o1 = ctx.createOscillator();
+    const o2 = ctx.createOscillator();
+    const g = ctx.createGain();
+
+    o1.type = 'sine';
+    o2.type = 'triangle';
+    o1.frequency.value = 880; // A5
+    o2.frequency.value = 660; // E5
+
+    g.gain.value = 0.0001;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 1.1);
+
+    o1.connect(g);
+    o2.connect(g);
+    g.connect(ctx.destination);
+
+    o1.start(now);
+    o2.start(now + 0.01);
+    o1.stop(now + 1.05);
+    o2.stop(now + 1.05);
+  } catch (e) {
+    // Silenciosamente no hacer nada si WebAudio no está disponible
+    console.warn('No se pudo reproducir sonido.', e);
+  }
+}
+
 // Función para girar
 function spin(){
   if(isSpinning) return;
@@ -94,11 +190,10 @@ function spin(){
   spinBtn.disabled = true;
 
   const len = prizes.length;
-  const segmentDeg = 360 / len;
 
-  // Opciones de giro: vueltas completas + offset aleatorio para que no siempre caiga en centros exactos
+  // Vueltas completas + offset aleatorio
   const extraRotations = 5 + Math.floor(Math.random() * 3); // 5 a 7 vueltas
-  const randomExtraDeg = Math.random() * 360; // cualquier posición dentro de la vuelta
+  const randomExtraDeg = Math.random() * 360;
   const stopAt = 360 * extraRotations + randomExtraDeg;
 
   // Aplicar la rotación al rotor (no al marco)
@@ -115,12 +210,30 @@ function spin(){
     rotor.style.transition = '';
     rotor.style.transform = `rotate(${finalNorm360}deg)`;
 
+    // Rebote del puntero
+    pointer.classList.remove('bounce');
+    // forzar reflow para reiniciar animación si necesario
+    // eslint-disable-next-line no-unused-expressions
+    void pointer.offsetWidth;
+    pointer.classList.add('bounce');
+
+    // Lanzar confetti desde el centro-superior de la rueda (cálculo en coordenadas de viewport)
+    const wheelRect = rotor.getBoundingClientRect();
+    const confettiX = Math.round(wheelRect.left + wheelRect.width / 2);
+    const confettiY = Math.round(wheelRect.top + 20); // cerca de la punta
+
+    // dar pequeño delay para encadenar efectos
+    setTimeout(()=> {
+      launchConfettiAt(confettiX, confettiY, { count: 100, duration: 2300 });
+      playWinSound();
+    }, 180);
+
     setTimeout(()=> {
       prizeText.textContent = prizes[winnerIndex];
       modal.classList.remove('hidden');
       isSpinning = false;
       spinBtn.disabled = false;
-    }, 150);
+    }, 300); // espera a que el rebote/confetti empiecen
 
     rotor.removeEventListener('transitionend', onEnd);
   };
@@ -136,3 +249,17 @@ closeModal.addEventListener('click', ()=> {
 // Inicialización
 drawWheel();
 spinBtn.addEventListener('click', spin);
+
+// Si redimensionás la ventana podrías querer re-dibujar o reescalar el canvas.
+// Para alta densidad de píxeles (retina) puedes ajustar el canvas width/height en JS.
+// (Opcional) Ejemplo rápido:
+(function adaptCanvasForDPR(){
+  const dpr = window.devicePixelRatio || 1;
+  const target = Math.min(500, Math.max(320, Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.6)));
+  canvas.width = target * dpr;
+  canvas.height = target * dpr;
+  canvas.style.width = target + 'px';
+  canvas.style.height = target + 'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  drawWheel();
+})();
