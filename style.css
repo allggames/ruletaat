@@ -49,7 +49,6 @@ body{
   border-radius:50%;
   will-change: transform;
   transform-origin: 50% 50%;
-  /* la transición la aplicamos desde JS para controlarla por spin() */
 }
 
 /* canvas ocupa todo el rotor */
@@ -60,19 +59,24 @@ canvas{
   display:block;
 }
 
-/* Puntero fijo EN EL MARCO, fuera del rotor */
+/* Puntero fijo INVERTIDO (punta apuntando hacia el centro) */
 .pointer{
   position:absolute;
   left:50%;
-  top:-12px;
+  /* Colocamos la base del triángulo levemente por encima del borde superior
+     y la punta entra unos px dentro de la ruleta para señalar claramente el segmento */
+  top: -6px; /* ajusta este valor si quieres que entre más o menos */
   transform:translateX(-50%);
   width:0;
   height:0;
+  /* triángulo con punta hacia abajo (apunta al centro) */
   border-left:14px solid transparent;
   border-right:14px solid transparent;
-  border-bottom:24px solid var(--accent);
-  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  border-bottom:28px solid var(--accent); /* punta hacia abajo */
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45));
   z-index:5;
+  /* pequeña línea base para que el triángulo parezca integrado */
+  box-shadow: 0 1px 0 rgba(0,0,0,0.2);
 }
 
 /* Button */
