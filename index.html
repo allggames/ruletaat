@@ -11,9 +11,12 @@
     <h1>Ruleta de Premios</h1>
 
     <div class="wheel-area">
+      <!-- wheel-outer es el marco estático; wheel-rotor es el que gira -->
       <div id="wheel" class="wheel-outer">
-        <canvas id="wheel-canvas" width="500" height="500"></canvas>
-        <div class="pointer"></div>
+        <div id="wheel-rotor" class="wheel-rotor">
+          <canvas id="wheel-canvas" width="500" height="500"></canvas>
+        </div>
+        <div class="pointer" aria-hidden="true"></div>
       </div>
     </div>
 
