@@ -1,18 +1,19 @@
 // Lista de premios (edítala como quieras)
 const prizes = [
-  "10 monedas",
-  "20 monedas",
-  "Un cupón",
-  "Nada :(",
-  "50 monedas",
-  "Premio sorpresa",
-  "5 monedas",
-  "Bono extra"
+  "PREMIO A ELECCIÓN",
+  "3000 FICHAS",
+  "PREMIO SORPRESA",
+  "100% DE BONUS DOBLE",
+  "200% DE BONUS DOBLE",
+  "OTRO INTENTO",
+  "150% BONUS DOBLE",
+  "1500 FICHAS"
 ];
 
 const canvas = document.getElementById('wheel-canvas');
 const ctx = canvas.getContext('2d');
-const outer = document.getElementById('wheel');
+// rotor es el que gira; wheel (outer) es el marco que queda fijo (contiene el puntero)
+const rotor = document.getElementById('wheel-rotor');
 const spinBtn = document.getElementById('spin-btn');
 const modal = document.getElementById('prize-modal');
 const prizeText = document.getElementById('prize-text');
@@ -83,20 +84,19 @@ function spin(){
   const segmentDeg = 360 / len;
 
   // Queremos que el centro del segmento seleccionado quede justo debajo del puntero (arriba)
-  // Por el offset en el dibujo (-90deg), el segmento 0 ya está en el puntero.
-  // Ángulo final: rotaciones completas + (selectedIndex * segmento) + mitad del segmento
+  // Recordar que dibujamos con offset -90deg, por eso segmento 0 queda arriba.
   const stopAt = 360 * extraRotations + selectedIndex * segmentDeg + segmentDeg / 2;
 
-  // Aplicar la rotación CSS (la ruleta gira en sentido horario con valores positivos)
-  outer.style.transition = 'transform 5s cubic-bezier(.14,.99,.38,1)';
-  outer.style.transform = `rotate(${stopAt}deg)`;
+  // Aplicar la rotación al rotor (no al marco)
+  rotor.style.transition = 'transform 5s cubic-bezier(.14,.99,.38,1)';
+  rotor.style.transform = `rotate(${stopAt}deg)`;
 
   // Cuando termina la transición, mostramos el resultado
   const onEnd = () => {
-    outer.style.transition = ''; // limpiar transición
-    // Mantener la rotación en estado actual (valor grande). Para evitar overflow visual podemos normalizar:
+    rotor.style.transition = ''; // limpiar transición
+    // Normalizar el ángulo para mantener valor pequeño
     const finalNormalized = stopAt % 360;
-    outer.style.transform = `rotate(${finalNormalized}deg)`;
+    rotor.style.transform = `rotate(${finalNormalized}deg)`;
     // Mostrar modal con premio
     setTimeout(()=> {
       prizeText.textContent = prizes[selectedIndex];
@@ -104,10 +104,10 @@ function spin(){
       isSpinning = false;
       spinBtn.disabled = false;
     }, 300); // pequeño delay para asegurar suavidad
-    outer.removeEventListener('transitionend', onEnd);
+    rotor.removeEventListener('transitionend', onEnd);
   };
 
-  outer.addEventListener('transitionend', onEnd);
+  rotor.addEventListener('transitionend', onEnd);
 }
 
 // Cierre modal
@@ -118,9 +118,3 @@ closeModal.addEventListener('click', ()=> {
 // Inicialización
 drawWheel();
 spinBtn.addEventListener('click', spin);
-
-// Redibujar si cambian tamaño (opcional)
-window.addEventListener('resize', ()=> {
-  // Si quieres adaptar el canvas a CSS size, reestablece width/height y redraw.
-  // (En esta demo usamos valores fijos de canvas para simplicidad)
-});
