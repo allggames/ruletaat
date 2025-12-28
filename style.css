@@ -29,17 +29,30 @@ body{
   margin:24px 0;
 }
 
+/* Marco estático */
 .wheel-outer{
   width:var(--size);
   height:var(--size);
   position:relative;
   border-radius:50%;
   box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-  transition: transform 5s cubic-bezier(.14,.99,.38,1);
-  will-change: transform;
   background: transparent;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
+/* Este es el rotor que SÍ gira (aplica transform sobre este) */
+.wheel-rotor{
+  width:100%;
+  height:100%;
+  border-radius:50%;
+  will-change: transform;
+  transform-origin: 50% 50%;
+  /* la transición la aplicamos desde JS para controlarla por spin() */
+}
+
+/* canvas ocupa todo el rotor */
 canvas{
   width:100%;
   height:100%;
@@ -47,6 +60,7 @@ canvas{
   display:block;
 }
 
+/* Puntero fijo EN EL MARCO, fuera del rotor */
 .pointer{
   position:absolute;
   left:50%;
