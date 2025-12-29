@@ -29,15 +29,19 @@
       <button id="spin-btn" class="spin-btn">Girar</button>
     </div>
 
-    <!-- Modal premio -->
-    <div id="prize-modal" class="modal hidden">
-      <div class="modal-content">
-        <h2>¡Felicidades!</h2>
-        <p id="prize-text"></p>
-        <button id="close-modal">Cerrar</button>
-      </div>
-    </div>
+   <!-- Modal premio -->
+<div id="prize-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="prize-title">
+  <div class="modal-content">
+    <h2 id="prize-title">¡Felicidades!</h2>
+    <p id="prize-text"></p>
 
+    <div class="modal-actions">
+      <button id="try-again-btn" class="modal-btn">Otro intento</button>
+      <button id="close-modal" class="modal-btn primary">Cerrar</button>
+    </div>
+  </div>
+</div>
+    
   </main>
 
   <script src="wheel.js"></script>
