@@ -286,8 +286,8 @@
           prizeTitle.textContent = allowTryAgain ? 'Volvamos a intentar' : '¡Felicidades!';
         }
         if (prizeText) {
-          // Si es otro intento podemos mostrar una frase distinta o solo el texto del premio.
-          prizeText.textContent = prize;
+          // Aquí: si es OTRO INTENTO no mostramos la frase (dejamos vacío)
+          prizeText.textContent = allowTryAgain ? '' : prize;
         }
         if (tryAgainBtn) {
           if (allowTryAgain) {
