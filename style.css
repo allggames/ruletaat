@@ -1,101 +1,148 @@
 :root{
   --size: 500px;
   --accent: #ffcc00;
-  --bg: #0f1724;
+  --bg1: #ff9a3c;
+  --bg2: #ff6a00;
+  --bg3: #ffbe6b;
+  --gold-1: #f6c24a;
+  --gold-2: #d99b2a;
 }
 
 *{box-sizing:border-box}
+html,body{height:100%}
 body{
   margin:0;
   font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  background: linear-gradient(180deg,#081226 0%, #0b1530 100%);
+  /* fondo degradé naranja */
+  background: radial-gradient(1200px 700px at 10% 10%, rgba(255,195,130,0.18), transparent 10%),
+              radial-gradient(1000px 600px at 90% 90%, rgba(255,140,60,0.12), transparent 8%),
+              linear-gradient(180deg, #ffd89b 0%, #ff7a00 55%, #ff5a00 100%);
   color:#fff;
   min-height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
   padding:32px;
+  overflow:hidden;
+}
+
+/* floating emoji decorations */
+.floating-icons {
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+}
+.floating-icons .float{
+  position:absolute;
+  font-size:28px;
+  opacity:0.92;
+  transform-origin:center;
+  filter:drop-shadow(0 6px 10px rgba(0,0,0,0.25));
+}
+.floating-icons .f1{ left:8%; top:18%; animation:float1 9s ease-in-out infinite; }
+.floating-icons .f2{ left:22%; top:68%; animation:float2 12s ease-in-out infinite; font-size:22px }
+.floating-icons .f3{ right:12%; top:22%; animation:float3 10s ease-in-out infinite; font-size:30px }
+.floating-icons .f4{ left:45%; top:6%; animation:float2 14s linear infinite; opacity:0.85 }
+.floating-icons .f5{ right:26%; top:66%; animation:float1 11s ease-in-out infinite; transform:scale(1.2) }
+.floating-icons .f6{ left:62%; top:36%; animation:float3 13s ease-in-out infinite; }
+
+@keyframes float1 {
+  0% { transform: translateY(0) rotate(0deg) }
+  50% { transform: translateY(-22px) rotate(12deg) }
+  100% { transform: translateY(0) rotate(0deg) }
+}
+@keyframes float2 {
+  0% { transform: translateY(0) rotate(-6deg) }
+  50% { transform: translateY(-36px) rotate(8deg) }
+  100% { transform: translateY(0) rotate(-6deg) }
+}
+@keyframes float3 {
+  0% { transform: translateY(0) rotate(3deg) }
+  50% { transform: translateY(-28px) rotate(-10deg) }
+  100% { transform: translateY(0) rotate(3deg) }
 }
 
 .container{
   width:100%;
-  max-width:900px;
+  max-width:980px;
   text-align:center;
+  position:relative;
+  z-index:5; /* above floating icons */
 }
 
+h1{
+  margin:0 0 8px 0;
+  color:rgba(12,12,12,0.15);
+  font-size:28px;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.06);
+}
+
+/* Layout wheel */
 .wheel-area{
   display:flex;
   justify-content:center;
-  margin:24px 0;
+  margin:12px 0 18px 0;
 }
 
-/* Marco estático */
+/* Marco estático con sombra sutil */
 .wheel-outer{
   width:var(--size);
   height:var(--size);
   position:relative;
   border-radius:50%;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-  background: transparent;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.02), transparent 10%);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.45),
+    inset 0 -6px 30px rgba(0,0,0,0.35);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:3;
+}
+
+/* rotor sigue girando - canvas ocupa todo el rotor */
+.wheel-rotor{
+  width:92%;
+  height:92%;
+  border-radius:50%;
+  will-change: transform;
+  transform-origin: 50% 50%;
   display:flex;
   align-items:center;
   justify-content:center;
 }
-
-/* Este es el rotor que SÍ gira (aplica transform sobre este) */
-.wheel-rotor{
-  width:100%;
-  height:100%;
-  border-radius:50%;
-  will-change: transform;
-  transform-origin: 50% 50%;
-}
-
-/* canvas ocupa todo el rotor */
 canvas{
   width:100%;
   height:100%;
-  border-radius:50%;
   display:block;
+  border-radius:50%;
+  box-shadow: 0 8px 14px rgba(0,0,0,0.3);
 }
 
-/* Puntero fijo INVERTIDO (SVG). La punta entra hacia el centro. */
+/* pointer (teardrop) */
 .pointer{
   position:absolute;
   left:50%;
-  /* Ajusta top para controlar cuánto entra la punta:
-     - valores positivos (ej. 2px, 6px) hacen que la punta entre más hacia el centro.
-     - valores negativos la dejan más afuera.
-     Aquí colocamos -2px por defecto y usaremos animación para el rebote */
-  top: -2px;
+  top:-4px; /* adjust to sink tip slightly into rim */
   transform:translateX(-50%) translateY(0);
   z-index:6;
   pointer-events:none;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));
+  filter: drop-shadow(0 6px 14px rgba(0,0,0,0.35));
   transition: transform 220ms cubic-bezier(.2,.9,.3,1);
 }
-
-/* Clase que se añade para el rebote (punta se mueve hacia adentro y vuelve) */
-.pointer.bounce {
-  animation: pointerBounce 700ms cubic-bezier(.2,.9,.3,1);
-}
-@keyframes pointerBounce {
-  0%   { transform: translateX(-50%) translateY(0); }
-  35%  { transform: translateX(-50%) translateY(10px); } /* entra hacia el centro */
-  60%  { transform: translateX(-50%) translateY(3px); }
-  100% { transform: translateX(-50%) translateY(0); }
-}
+.pointer.bounce { animation: pointerBounce 700ms cubic-bezier(.2,.9,.3,1); }
 
 /* Button */
 .spin-btn{
-  background:linear-gradient(180deg,#06b6d4,#0284c7);
-  color:#021226;
+  background:linear-gradient(180deg,#10c0e5,#057fb0);
+  color:white;
   border:none;
-  padding:14px 28px;
-  font-size:18px;
+  padding:12px 20px;
+  font-size:16px;
   border-radius:12px;
   cursor:pointer;
-  box-shadow: 0 6px 14px rgba(2,132,199,0.35);
+  box-shadow: 0 8px 18px rgba(2,132,199,0.28);
 }
 .spin-btn:disabled{
   opacity:0.6;
@@ -109,52 +156,26 @@ canvas{
   display:flex;
   align-items:center;
   justify-content:center;
-  background:rgba(2,6,23,0.6);
+  background:rgba(2,6,23,0.45);
   z-index:999;
 }
 .modal.hidden{ display:none }
 .modal-content{
   background:#fff;
   color:#021226;
-  padding:24px;
+  padding:18px 22px;
   border-radius:12px;
   text-align:center;
   min-width:300px;
-  box-shadow:0 10px 30px rgba(2,6,23,0.4);
+  box-shadow:0 14px 40px rgba(2,6,23,0.35);
 }
-.modal-content h2{ margin-top:0 }
+.modal-content h2{ margin-top:0; margin-bottom:6px; font-size:18px; }
+.modal-actions{ display:flex; gap:10px; justify-content:center; margin-top:12px; }
+.modal-btn{ padding:8px 14px; border-radius:8px; border:1px solid #cfcfcf; background:#f5f5f5; color:#021226; cursor:pointer; }
+.modal-btn.primary{ background:#0284c7; color:white; border-color:transparent; }
+.modal-btn[disabled]{ opacity:0.55; cursor:not-allowed; }
 
-/* Estilos para los botones dentro del modal (Otro intento / Cerrar) */
-.modal-actions{
-  display:flex;
-  gap:10px;
-  justify-content:center;
-  margin-top:14px;
-}
-.modal-btn{
-  padding:8px 14px;
-  border-radius:8px;
-  border:1px solid #cfcfcf;
-  background:#f5f5f5;
-  color:#021226;
-  cursor:pointer;
-  transition: background-color 150ms, transform 120ms;
-}
-.modal-btn:hover:not([disabled]){ background:#e9e9e9; transform: translateY(-1px); }
-.modal-btn[disabled]{
-  opacity:0.55;
-  cursor:not-allowed;
-}
-.modal-btn.primary{
-  background:#0284c7;
-  color:white;
-  border-color:transparent;
-}
-
-/* focus visible para accesibilidad */
-.modal-btn:focus, .spin-btn:focus { outline: 3px solid rgba(2,132,199,0.24); outline-offset:3px; }
-
-/* Canvas para confetti se crea/posiciona desde JS; su z-index debe estar entre la rueda y el modal */
+/* confetti canvas */
 .confetti-canvas{
   position:fixed;
   left:0;
@@ -163,4 +184,11 @@ canvas{
   height:100vh;
   pointer-events:none;
   z-index:50;
+}
+
+/* responsive: smaller wheel */
+@media (max-width:520px){
+  :root{ --size: 360px; }
+  .floating-icons .float{ display:none; }
+  .spin-btn{ padding:10px 16px; }
 }
