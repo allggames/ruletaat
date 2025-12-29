@@ -139,8 +139,7 @@
         ctx.stroke();
       }
 
-   // Función que dibuja texto radial, LEÍBLE desde el CENTRO hacia el BORDE.
-// Dibuja líneas en columna a lo largo de la bisectriz, empezando cerca del centro.
+  // Función mejorada: dibuja texto radial desde el centro hacia afuera sin solapamientos
 function drawSegmentTextAlongTriangle(text, midAngle, segOuter, segInner) {
   ctx.save();
 
@@ -148,62 +147,138 @@ function drawSegmentTextAlongTriangle(text, midAngle, segOuter, segInner) {
   const segHalfAngle = Math.PI / len;
 
   // Ajustes
-  const innerPadding = 12;
-  const outerPadding = 8;
-  const maxFont = 20;
+  const innerPadding = 14;   // separación desde el borde interno (knob)
+  const outerPadding = 10;   // separación desde el borde externo
+  const maxFont = 18;
   const minFont = 9;
 
   const availRadial = segOuter - segInner - innerPadding - outerPadding;
   if (availRadial <= 6) { ctx.restore(); return; }
 
-  // helper: chord width at radius r (approx ancho disponible en esa radial)
-  const chordWidthAt = (r) => Math.max(8, 2 * r * Math.sin(segHalfAngle) * 0.94);
+  // helper: ancho aproximado (cuerda) disponible en una distancia radial r
+  const chordWidthAt = (r) => Math.max(12, 2 * r * Math.sin(segHalfAngle) * 0.92);
 
-  // encontrar fontSize y wrapping que quepan
-  let fontSize = Math.min(maxFont, Math.max(12, Math.floor(availRadial / 4)));
-  let lines = [];
-  while (fontSize >= minFont) {
-    ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
-    // sample distance para medir ancho
-    const sampleDist = Math.round(segInner + innerPadding + Math.max(fontSize * 0.6, availRadial * 0.28));
-    const availWidth = chordWidthAt(sampleDist);
-    lines = wrapByMeasure(text, availWidth, ctx);
-    const maxLines = Math.max(1, Math.floor(availRadial / (fontSize + 2)));
-    if (lines.length <= maxLines) break;
-    fontSize--;
+  // número máximo de líneas que pueden caber radialmente para un fontSize dado:
+  function maxLinesForFont(fs) {
+    return Math.max(1, Math.floor(availRadial / (fs + 2)));
   }
 
-  // coordenadas relativas al centro
+  // distancia de la primera línea (más cerca del centro)
+  function startDistForFont(fs) {
+    return segInner + innerPadding + Math.max(2, Math.round(fs / 2));
+  }
+
+  // intento de dividir el texto en líneas que quepan en cada ancho dado
+  function trySplitIntoLines(fs) {
+    ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
+    const maxLines = maxLinesForFont(fs);
+    const lineHeight = fs + 2;
+    const lines = [];
+    const words = String(text).split(' ');
+
+    let wordIndex = 0;
+    for (let lineIdx = 0; lineIdx < maxLines && wordIndex < words.length; lineIdx++) {
+      const dist = startDistForFont(fs) + lineIdx * lineHeight;
+      const availW = chordWidthAt(dist);
+      let cur = '';
+
+      // llenar la línea con tantas palabras como quepan
+      while (wordIndex < words.length) {
+        const w = words[wordIndex];
+        const test = cur ? (cur + ' ' + w) : w;
+        const width = ctx.measureText(test).width;
+        if (width <= availW) {
+          cur = test;
+          wordIndex++;
+        } else {
+          // la palabra no cabe completa en esta línea
+          // si la línea está vacía (palabra más larga que ancho), partirla por caracteres
+          if (!cur) {
+            let part = '';
+            for (const ch of w) {
+              if (ctx.measureText(part + ch).width <= availW) part += ch;
+              else {
+                if (part) lines.push(part);
+                part = ch;
+              }
+            }
+            // si quedó resto en 'part' lo dejamos como cur (puede seguir en siguiente línea)
+            if (part) {
+              cur = part;
+              // la palabra original ya fue parcialmente consumida; reemplazamos la palabra actual
+              // por la parte restante en words[wordIndex] para el siguiente ciclo
+              const remaining = w.slice(part.length);
+              if (remaining.length > 0) {
+                words[wordIndex] = remaining;
+              } else {
+                wordIndex++;
+              }
+            } else {
+              // si no pudimos partir (muy raro) salimos
+              wordIndex++;
+            }
+          }
+          break;
+        }
+      }
+
+      if (cur) lines.push(cur);
+    }
+
+    // si consumimos todas las palabras, éxito
+    if (words.length === 0 || wordIndex >= words.length) {
+      return { ok: true, lines };
+    }
+
+    // si no alcanzó el número de líneas, y quedan palabras, indicar fallo y devolver las líneas parciales
+    if (wordIndex < words.length) {
+      return { ok: false, lines };
+    }
+    return { ok: true, lines };
+  }
+
+  // buscar fontSize que permita acomodar todas las palabras
+  let fs = Math.min(maxFont, Math.max(12, Math.floor(availRadial / 4)));
+  let result;
+  while (fs >= minFont) {
+    result = trySplitIntoLines(fs);
+    if (result.ok && result.lines.length > 0) break;
+    fs--;
+  }
+  if (!result || result.lines.length === 0) {
+    // fallback: mostrar texto corto en una línea con tamaño mínimo
+    fs = minFont;
+    ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
+    result = { lines: [text] };
+  }
+
+  const lines = result.lines;
+  const lineHeight = fs + 2;
+  const startDist = startDistForFont(fs);
+
+  // preparar para dibujar: rotar el contexto a la bisectriz
   ctx.translate(cx, cy);
-  // rotamos la bisectriz al eje +X (de modo que +X apunte hacia el exterior del sector)
   ctx.rotate(midAngle);
 
-  // si el sector está en la mitad inferior, marcamos flipped para dibujar la columna en la dirección contraria
   const deg = (midAngle * 180 / Math.PI + 360) % 360;
   const flipped = (deg > 90 && deg < 270);
 
-  // distancia radial de la primera línea (más cerca del centro)
-  const startDist = segInner + innerPadding + Math.max(2, Math.round(fontSize / 2));
-  const lineHeight = fontSize + 2;
-
-  // dibujar cada línea en orden (i=0 más cerca del centro)
+  // dibujar cada línea desde el centro hacia afuera
   for (let i = 0; i < lines.length; i++) {
     const dist = startDist + i * lineHeight;
     if (dist + lineHeight / 2 > segOuter - outerPadding) break;
 
     ctx.save();
     if (!flipped) {
-      // +X apunta hacia fuera: dibujamos en x = +dist, texto alineado a la izquierda (se lee hacia fuera)
       ctx.translate(dist, 0);
       ctx.textAlign = 'left';
     } else {
-      // sector invertido: dibujamos en x = -dist y alineamos a la derecha para que la lectura vaya hacia afuera
       ctx.translate(-dist, 0);
       ctx.textAlign = 'right';
     }
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#3a1f00';
-    ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
+    ctx.font = `700 ${fs}px 'Lexend', sans-serif';
     ctx.fillText(lines[i], 0, 0);
     ctx.restore();
   }
