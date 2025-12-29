@@ -12,15 +12,27 @@
 
     <div class="wheel-area">
       <!-- wheel-outer es el marco estático; wheel-rotor es el que gira -->
-      <div id="wheel" class="wheel-outer">
+      <div id="wheel" class="wheel-outer" aria-hidden="false">
         <div id="wheel-rotor" class="wheel-rotor">
           <canvas id="wheel-canvas" width="500" height="500"></canvas>
         </div>
 
-        <!-- Puntero INVERTIDO (SVG) apuntando hacia el centro -->
-        <svg class="pointer" width="36" height="28" viewBox="0 0 30 20" aria-hidden="true" focusable="false">
-          <!-- Triángulo con la punta hacia abajo (centro de la ruleta) -->
-          <polygon points="0,0 30,0 15,20" fill="#ffcc00" stroke="#dfb300" stroke-width="1"/>
+        <!-- Puntero estilo "teardrop" (apunta hacia el centro) -->
+        <svg class="pointer" width="44" height="40" viewBox="0 0 44 40" aria-hidden="true" focusable="false">
+          <!-- Teardrop invertido, punta hacia abajo -->
+          <defs>
+            <linearGradient id="gPtr" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#5ed0ff"/>
+              <stop offset="1" stop-color="#0ea6ff"/>
+            </linearGradient>
+            <radialGradient id="gH" cx="40%" cy="20%" r="60%">
+              <stop offset="0" stop-color="rgba(255,255,255,0.9)"/>
+              <stop offset="1" stop-color="rgba(255,255,255,0)"/>
+            </radialGradient>
+          </defs>
+          <path d="M22 2 C10 2 6 18 22 38 C38 18 34 2 22 2 Z" fill="url(#gPtr)" stroke="#0b8dd0" stroke-width="1.5" />
+          <path d="M22 6 C18 6 13 18 22 34 C31 18 26 6 22 6 Z" fill="url(#gH)" opacity="0.28"/>
+          <circle cx="22" cy="9" r="5" fill="rgba(255,255,255,0.55)" opacity="0.25" />
         </svg>
       </div>
     </div>
@@ -43,6 +55,16 @@
 </div>
     
   </main>
+
+  <!-- floating icons -->
+  <div class="floating-icons" aria-hidden="true">
+    <span class="float f1">🔱</span>
+    <span class="float f2">✨</span>
+    <span class="float f3">🎁</span>
+    <span class="float f4">✨</span>
+    <span class="float f5">🔱</span>
+    <span class="float f6">🎁</span>
+  </div>
 
   <script src="wheel.js"></script>
 </body>
