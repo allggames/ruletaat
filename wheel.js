@@ -1,5 +1,9 @@
+// wheel.js — version restaurada + texto curvo por sector (solo este archivo)
+// Restaura la funcionalidad anterior y cambia únicamente cómo se dibuja el texto:
+// ahora el texto sigue la curva exterior de cada sector (carácter por carácter).
+
 (function () {
-  // Lista de premios (tal como me diste)
+  // Premios (tal como tenés)
   const prizes = [
     "PREMIO A ELECCIÓN",
     "3000 FICHAS",
@@ -11,23 +15,17 @@
     "1500 FICHAS"
   ];
 
-  // Palette: tonos de naranja distintos (cada segmento)
+  // Tonos naranja para cada segmento
   const orangeTones = [
-    '#ff8a3d', // 1
-    '#ff7a15',
-    '#ff9f4a',
-    '#ff6a00',
-    '#ffb069',
-    '#ff942a',
-    '#ff7f3c',
-    '#ffab66'
+    '#ff8a3d','#ff7a15','#ff9f4a','#ff6a00',
+    '#ffb069','#ff942a','#ff7f3c','#ffab66'
   ];
 
   const LOCK_KEY = 'ruleta_locked_date_v1';
 
-  function todayKey() { return new Date().toISOString().slice(0,10); }
-  function lockForToday() { try { localStorage.setItem(LOCK_KEY, todayKey()); } catch(e){} }
-  function isLockedToday() { try { return localStorage.getItem(LOCK_KEY) === todayKey(); } catch(e){ return false; } }
+  function todayKey(){ return new Date().toISOString().slice(0,10); }
+  function lockForToday(){ try{ localStorage.setItem(LOCK_KEY, todayKey()); }catch(e){} }
+  function isLockedToday(){ try{ return localStorage.getItem(LOCK_KEY) === todayKey(); }catch(e){ return false } }
   window.__ruleta_clearLock = () => { try { localStorage.removeItem(LOCK_KEY); console.info('Ruleta lock cleared'); } catch(e){} };
 
   // Esperar DOM
@@ -41,7 +39,7 @@
       const prizeText = document.getElementById('prize-text');
       const prizeTitle = document.getElementById('prize-title') || (modal && modal.querySelector('h2'));
       const closeModal = document.getElementById('close-modal');
-      const tryAgainBtn = document.getElementById('try-again-btn'); // opcional
+      const tryAgainBtn = document.getElementById('try-again-btn');
       const pointer = document.querySelector('.pointer');
 
       const ctx = canvas.getContext('2d');
@@ -77,101 +75,19 @@
         radius = size / 2 - 8;
       }
 
-      // --------------------
-      // Improved text drawing per-sector:
-      // - measureText wrapping
-      // - auto-shrink font if necessary
-      // - rotate text so it stays upright
-      // --------------------
-      function drawSegmentText(text, midAngle, segOuter) {
-        ctx.save();
-        ctx.translate(cx, cy);
-
-        // Normalize angle in degrees 0..360
-        let angleDeg = (midAngle * 180 / Math.PI + 360) % 360;
-
-        // Decide whether to flip text so it's always readable
-        let drawAngle = midAngle;
-        if (angleDeg > 90 && angleDeg < 270) {
-          drawAngle += Math.PI;
-        }
-        ctx.rotate(drawAngle);
-
-        // maximum width for text (pixels) - leave margins
-        const maxWidth = segOuter * 0.7;
-
-        // start with font size proportional to radius
-        let fontSize = Math.max(12, Math.floor(radius / 8));
-        ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
-        ctx.fillStyle = '#3a1f00';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // wrap using measureText
-        let lines = wrapByMeasure(text, maxWidth, ctx);
-
-        // if too tall, reduce font size
-        const maxTextHeight = segOuter * 0.48; // available vertical space
-        while ((lines.length * (fontSize + 2)) > maxTextHeight && fontSize > 9) {
-          fontSize--;
-          ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
-          lines = wrapByMeasure(text, maxWidth, ctx);
-        }
-
-        const lineHeight = fontSize + 2;
-        const dist = segOuter * 0.56; // distance from center where text is drawn
-
-        for (let i = 0; i < lines.length; i++) {
-          const offsetY = (i - (lines.length - 1) / 2) * lineHeight;
-          ctx.fillText(lines[i], dist, offsetY);
-        }
-
-        ctx.restore();
+      // util: shade hex
+      function shade(hex, percent) {
+        const f = hex.slice(1);
+        const t = percent < 0 ? 0 : 255;
+        const p = Math.abs(percent) / 100;
+        const R = parseInt(f.substring(0,2),16), G = parseInt(f.substring(2,4),16), B = parseInt(f.substring(4,6),16);
+        const newR = Math.round((t - R) * p) + R;
+        const newG = Math.round((t - G) * p) + G;
+        const newB = Math.round((t - B) * p) + B;
+        return `rgb(${newR},${newG},${newB})`;
       }
 
-      function wrapByMeasure(text, maxWidth, ctxRef) {
-        if (!text) return [''];
-        const words = text.split(' ');
-        const lines = [];
-        let cur = '';
-        for (const w of words) {
-          const test = cur ? (cur + ' ' + w) : w;
-          if (ctxRef.measureText(test).width <= maxWidth) {
-            cur = test;
-          } else {
-            if (cur) lines.push(cur);
-            // if single word too long, break by characters
-            if (ctxRef.measureText(w).width > maxWidth) {
-              const parts = breakWordByMeasure(w, maxWidth, ctxRef);
-              // all but last become full lines
-              for (let i = 0; i < parts.length - 1; i++) lines.push(parts[i]);
-              cur = parts[parts.length - 1];
-            } else {
-              cur = w;
-            }
-          }
-        }
-        if (cur) lines.push(cur);
-        return lines;
-      }
-
-      function breakWordByMeasure(word, maxWidth, ctxRef) {
-        const parts = [];
-        let cur = '';
-        for (const ch of word) {
-          const test = cur + ch;
-          if (ctxRef.measureText(test).width <= maxWidth) {
-            cur = test;
-          } else {
-            if (cur) parts.push(cur);
-            cur = ch;
-          }
-        }
-        if (cur) parts.push(cur);
-        return parts;
-      }
-
-      // helper: draw a glossy "light" circle
+      // Dibuja luz decorativa
       function drawLight(x, y, r) {
         const radial = ctx.createRadialGradient(x - r/3, y - r/3, 1, x, y, r);
         radial.addColorStop(0, 'rgba(255,255,255,0.95)');
@@ -181,16 +97,14 @@
         ctx.fillStyle = radial;
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
-        // small highlight
         ctx.beginPath();
         ctx.fillStyle = 'rgba(255,255,255,0.55)';
         ctx.arc(x - r/3, y - r/3, r/2.5, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // draw center knob with a star
+      // Knob central
       function drawCenterKnob(x, y, r) {
-        // outer ring
         const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
         g.addColorStop(0, '#ffd86b');
         g.addColorStop(0.5, '#f6bf3a');
@@ -199,40 +113,28 @@
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fillStyle = g;
         ctx.fill();
-        // inner face
         ctx.beginPath();
         ctx.arc(x, y, r * 0.72, 0, Math.PI * 2);
         ctx.fillStyle = '#fff6d8';
         ctx.fill();
-        // small highlight
         ctx.beginPath();
         ctx.arc(x - r * 0.28, y - r * 0.36, r * 0.22, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.55)';
         ctx.fill();
-
-        // star in center
         drawStar(x, y, Math.max(6, Math.floor(r * 0.36)), Math.max(3, Math.floor(r * 0.14)), '#ffb84d');
       }
 
-      // draw a star (centered)
       function drawStar(cxS, cyS, outerR, innerR, color) {
         const spikes = 5;
         let rot = Math.PI / 2 * 3;
-        let x = cxS;
-        let y = cyS;
         ctx.beginPath();
         ctx.moveTo(cxS, cyS - outerR);
         for (let i = 0; i < spikes; i++) {
-          x = cxS + Math.cos(rot) * outerR;
-          y = cyS + Math.sin(rot) * outerR;
-          ctx.lineTo(x, y);
+          ctx.lineTo(cxS + Math.cos(rot) * outerR, cyS + Math.sin(rot) * outerR);
           rot += Math.PI / spikes;
-          x = cxS + Math.cos(rot) * innerR;
-          y = cyS + Math.sin(rot) * innerR;
-          ctx.lineTo(x, y);
+          ctx.lineTo(cxS + Math.cos(rot) * innerR, cyS + Math.sin(rot) * innerR);
           rot += Math.PI / spikes;
         }
-        ctx.lineTo(cxS, cyS - outerR);
         ctx.closePath();
         ctx.fillStyle = color;
         ctx.fill();
@@ -240,21 +142,147 @@
         ctx.stroke();
       }
 
-      // small utility: shade color (hex) by percent (-100..100)
-      function shade(hex, percent) {
-        const f = hex.slice(1);
-        const t = percent < 0 ? 0 : 255;
-        const p = Math.abs(percent) / 100;
-        const R = parseInt(f.substring(0,2),16),
-              G = parseInt(f.substring(2,4),16),
-              B = parseInt(f.substring(4,6),16);
-        const newR = Math.round((t - R) * p) + R;
-        const newG = Math.round((t - G) * p) + G;
-        const newB = Math.round((t - B) * p) + B;
-        return `rgb(${newR},${newG},${newB})`;
+      // --- Nuevo: dibujo de texto CURVO sobre el arco exterior del segmento ---
+      // Dibuja texto centrado a lo largo del arco exterior del segmento.
+      // Esto evita solapes y adapta tamaños; mantiene la tipografía Lexend.
+      function drawTextAlongArc(text, midAngle, outerRadius, options = {}) {
+        const maxArcFraction = 0.78; // cuánto del arco del sector puede usar el texto (0-1)
+        // font base
+        let fontSize = Math.max(12, Math.floor(radius / 9));
+        ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
+        ctx.fillStyle = '#3a1f00';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+
+        // medida total del texto con separador pequeño entre letras
+        // trabajamos carácter por carácter para curvar correctamente
+        const chars = text.split('');
+        // ancho por letra estimado con measureText for current font
+        const widths = chars.map(ch => ctx.measureText(ch).width);
+        const textWidth = widths.reduce((a,b) => a+b, 0);
+        // Convertimos ancho en px a ángulo en rad sobre la arc (arcLen = angle * r)
+        const availableArc = (2 * Math.PI) / prizes.length * outerRadius * maxArcFraction;
+        // si texto demasiado largo, reducimos fontSize hasta que quepa o alcance mínimo
+        while (textWidth > availableArc && fontSize > 9) {
+          fontSize--;
+          ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
+          for (let i = 0; i < chars.length; i++) widths[i] = ctx.measureText(chars[i]).width;
+        }
+        const finalTextWidth = widths.reduce((a,b) => a+b, 0);
+        // total angle the text will occupy
+        const textAngle = finalTextWidth / outerRadius;
+        // start angle: center the text on midAngle
+        const startAngle = midAngle - textAngle / 2;
+
+        // draw each char rotating around center
+        let angleCursor = startAngle;
+        for (let i = 0; i < chars.length; i++) {
+          const w = widths[i];
+          const charAngle = w / outerRadius;
+          // angle at which to place the character (middle of the char)
+          const charMid = angleCursor + charAngle / 2;
+          // position on arc (a bit inward from rim for readability)
+          const r = outerRadius - (radius * 0.14); // pull text inward a bit
+          const x = cx + Math.cos(charMid) * r;
+          const y = cy + Math.sin(charMid) * r;
+          // rotate canvas so char is tangent to circle
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(charMid + Math.PI / 2); // rotate so text follows arc
+          ctx.fillText(chars[i], 0, 0);
+          ctx.restore();
+          angleCursor += charAngle;
+        }
       }
 
-      // Calcula índice del segmento apuntado por el puntero dada la rotación final (grados)
+      // draw wheel components
+      function drawWheel() {
+        updateSizes();
+        ctx.clearRect(0, 0, size, size);
+
+        const len = prizes.length;
+        const segmentAngle = (2 * Math.PI) / len;
+
+        // rim outer (gold ring)
+        const rimOuter = radius + 12;
+        const rimInner = radius + 4;
+        const g = ctx.createLinearGradient(0, cy - rimOuter, 0, cy + rimOuter);
+        g.addColorStop(0, '#ffd86b'); g.addColorStop(0.5, '#f6bf3a'); g.addColorStop(1, '#d99b2a');
+        ctx.beginPath();
+        ctx.arc(cx, cy, rimOuter, 0, Math.PI * 2);
+        ctx.arc(cx, cy, rimInner, Math.PI * 2, 0, true);
+        ctx.closePath();
+        ctx.fillStyle = g;
+        ctx.fill();
+
+        // inner bevel subtle
+        ctx.beginPath();
+        ctx.arc(cx, cy, rimInner - 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff';
+        ctx.globalAlpha = 0.04;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // segments
+        const segOuter = radius;
+        const segInner = radius * 0.12;
+        for (let i = 0; i < len; i++) {
+          const start = -Math.PI / 2 + i * segmentAngle;
+          const end = start + segmentAngle;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.arc(cx, cy, segOuter, start, end);
+          ctx.closePath();
+
+          const fillColor = orangeTones[i % orangeTones.length] || '#ff8a3d';
+          const segG = ctx.createLinearGradient(
+            cx + Math.cos(start + segmentAngle / 2) * segOuter,
+            cy + Math.sin(start + segmentAngle / 2) * segOuter,
+            cx - Math.cos(start + segmentAngle / 2) * segOuter,
+            cy - Math.sin(start + segmentAngle / 2) * segOuter
+          );
+          segG.addColorStop(0, shade(fillColor, -8));
+          segG.addColorStop(1, shade(fillColor, 6));
+          ctx.fillStyle = segG;
+          ctx.fill();
+
+          // thin separators
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.arc(cx, cy, segOuter, start, start + 0.004);
+          ctx.lineTo(cx, cy);
+          ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // draw curved text along arc: center angle = start + half segment
+          const midAngle = start + segmentAngle / 2;
+          drawTextAlongArc(prizes[i], midAngle, segOuter);
+        }
+
+        // lights around rim
+        const lights = 12;
+        for (let i = 0; i < lights; i++) {
+          const ang = -Math.PI / 2 + (i / lights) * (Math.PI * 2);
+          const lx = cx + Math.cos(ang) * (rimOuter - 6);
+          const ly = cy + Math.sin(ang) * (rimOuter - 6);
+          drawLight(lx, ly, 6);
+        }
+
+        // center knob
+        drawCenterKnob(cx, cy, segInner * 2.2);
+
+        // subtle inner shadow
+        ctx.beginPath();
+        ctx.arc(cx, cy, segOuter, 0, Math.PI * 2);
+        const innerShadow = ctx.createRadialGradient(cx, cy, segOuter * 0.6, cx, cy, segOuter);
+        innerShadow.addColorStop(0, 'rgba(0,0,0,0)');
+        innerShadow.addColorStop(1, 'rgba(0,0,0,0.12)');
+        ctx.fillStyle = innerShadow;
+        ctx.fill();
+      }
+
+      // compute index of winner from final normalized degrees
       function computeIndexFromRotation(finalNormalizedDeg) {
         const len = prizes.length;
         const segmentDeg = 360 / len;
@@ -271,7 +299,7 @@
         return bestIdx;
       }
 
-      // Confetti (simple)
+      // Confetti simple
       function launchConfettiAt(x, y, opts = {}) {
         const count = opts.count || 80;
         const duration = opts.duration || 2200;
@@ -324,37 +352,33 @@
         setTimeout(()=> { if (c.parentNode) c.remove(); }, duration + 300);
       }
 
-      // Sonido breve
+      // sound
       function playWinSound() {
         try {
-          const actx = new (window.AudioContext || window.webkitAudioContext)();
-          const now = actx.currentTime;
-          const o1 = actx.createOscillator();
-          const o2 = actx.createOscillator();
-          const g = actx.createGain();
+          const ctxA = new (window.AudioContext || window.webkitAudioContext)();
+          const now = ctxA.currentTime;
+          const o1 = ctxA.createOscillator();
+          const o2 = ctxA.createOscillator();
+          const g = ctxA.createGain();
           o1.type = 'sine'; o2.type = 'triangle';
           o1.frequency.value = 880; o2.frequency.value = 660;
           g.gain.value = 0.0001;
           g.gain.setValueAtTime(0.0001, now);
           g.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
           g.gain.exponentialRampToValueAtTime(0.0001, now + 1.1);
-          o1.connect(g); o2.connect(g); g.connect(actx.destination);
+          o1.connect(g); o2.connect(g); g.connect(ctxA.destination);
           o1.start(now); o2.start(now + 0.01);
           o1.stop(now + 1.05); o2.stop(now + 1.05);
-        } catch(e) { console.warn('Audio no disponible', e); }
+        } catch (e) {
+          console.warn('Audio no disponible', e);
+        }
       }
 
-      // Estado
+      // spin / finalize (same behavior)
       let isSpinning = false;
-      let lastStopDegrees = 0;
-
-      // Gira la ruleta
       function spin() {
         if (isSpinning) return;
-        if (isLockedToday()) {
-          alert('Ya usaste tu intento por hoy. Vuelve mañana.');
-          return;
-        }
+        if (isLockedToday()) { alert('Ya usaste tu intento por hoy. Vuelve mañana.'); return; }
         isSpinning = true;
         if (spinBtn) spinBtn.disabled = true;
 
@@ -381,7 +405,6 @@
       function finalizeRotation(stopAt) {
         const finalNormalized = stopAt % 360;
         const finalNorm360 = (finalNormalized + 360) % 360;
-        lastStopDegrees = finalNorm360;
 
         if (rotor) {
           rotor.style.transition = '';
@@ -391,14 +414,12 @@
         const winnerIndex = computeIndexFromRotation(finalNorm360);
         const prize = prizes[winnerIndex];
 
-        // Rebote puntero
         if (pointer) {
           pointer.classList.remove('bounce');
           void pointer.offsetWidth;
           pointer.classList.add('bounce');
         }
 
-        // Confetti y sonido
         const wheelRect = (rotor || canvas).getBoundingClientRect();
         const confettiX = Math.round(wheelRect.left + wheelRect.width / 2);
         const confettiY = Math.round(wheelRect.top + 20);
@@ -407,11 +428,9 @@
           playWinSound();
         }, 180);
 
-        // Determinar allowTryAgain (compara en minúsculas)
         const prizeNormalized = String(prize || '').trim().toLowerCase();
         const allowTryAgain = prizeNormalized.startsWith('otro intento');
 
-        // Manejo de bloqueo por día
         if (!allowTryAgain) {
           lockForToday();
           if (spinBtn) spinBtn.disabled = true;
@@ -419,12 +438,10 @@
           if (spinBtn) spinBtn.disabled = false;
         }
 
-        // Actualizar modal contenido y botones según el tipo de premio
         if (prizeTitle) {
           prizeTitle.textContent = allowTryAgain ? 'Volvamos a intentar' : '¡Felicidades!';
         }
         if (prizeText) {
-          // si es OTRO INTENTO no mostramos texto (vacío)
           prizeText.textContent = allowTryAgain ? '' : prize;
         }
         if (tryAgainBtn) {
@@ -432,7 +449,6 @@
             tryAgainBtn.disabled = false;
             tryAgainBtn.textContent = 'Otra vuelta';
             tryAgainBtn.title = 'Haz otra vuelta ahora';
-            // Sobrescribir comportamiento: cerrar modal y girar inmediatamente
             tryAgainBtn.onclick = function () {
               if (modal) modal.classList.add('hidden');
               setTimeout(() => { spin(); }, 120);
@@ -445,16 +461,13 @@
           }
         }
 
-        // Mostrar modal si existe
         if (modal) modal.classList.remove('hidden');
-
         isSpinning = false;
       }
 
-      // Listeners seguros
+      // UI binding
       if (spinBtn) spinBtn.addEventListener('click', spin);
       if (tryAgainBtn && !tryAgainBtn.onclick) {
-        // In case default handler
         tryAgainBtn.addEventListener('click', () => {
           if (tryAgainBtn.disabled) return;
           if (modal) modal.classList.add('hidden');
@@ -467,27 +480,26 @@
         });
       }
 
-      // Redimensionar al cambiar ventana
       window.addEventListener('resize', () => {
         try { updateSizes(); drawWheel(); } catch(e) { console.error(e); }
       });
 
-      // Inicialización final: adaptar tamaño y dibujar
-      updateSizes();
+      // Dibuja cuando la fuente esté lista para que measureText sea fiable
+      function safeDraw() {
+        try { drawWheel(); console.info('Wheel inicializada correctamente.'); } catch (e) { console.error('Error en drawWheel', e); }
+      }
 
-      // Wait for font to load (so measureText is accurate), then draw
       if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => drawWheel()).catch(() => drawWheel());
+        document.fonts.ready.then(() => safeDraw()).catch(() => setTimeout(safeDraw, 60));
+        // fallback por si tarda demasiado
+        setTimeout(() => safeDraw(), 500);
       } else {
-        drawWheel();
+        setTimeout(() => safeDraw(), 40);
       }
 
-      // Si ya hay bloqueo hoy, deshabilitar botón Girar en carga
-      if (spinBtn) {
-        spinBtn.disabled = isLockedToday();
-      }
+      // bloquear si ya jugó hoy
+      if (spinBtn) spinBtn.disabled = isLockedToday();
 
-      console.info('Wheel inicializada correctamente.');
     } catch (err) {
       console.error('Error inicializando ruleta:', err);
     }
