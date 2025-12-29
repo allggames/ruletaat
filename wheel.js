@@ -11,6 +11,18 @@
     "1500 FICHAS"
   ];
 
+  // Palette: tonos de naranja distintos (cada segmento)
+  const orangeTones = [
+    '#ff8a3d', // 1
+    '#ff7a15',
+    '#ff9f4a',
+    '#ff6a00',
+    '#ffb069',
+    '#ff942a',
+    '#ff7f3c',
+    '#ffab66'
+  ];
+
   const LOCK_KEY = 'ruleta_locked_date_v1';
 
   function todayKey() { return new Date().toISOString().slice(0,10); }
@@ -31,12 +43,6 @@
       const closeModal = document.getElementById('close-modal');
       const tryAgainBtn = document.getElementById('try-again-btn'); // opcional
       const pointer = document.querySelector('.pointer');
-
-      if (!rotor) console.warn('No se encontró #wheel-rotor (rotor).');
-      if (!spinBtn) console.warn('No se encontró #spin-btn (botón Girar).');
-      if (!modal) console.warn('No se encontró #prize-modal (modal).');
-      if (!prizeText) console.warn('No se encontró #prize-text (texto premio).');
-      if (!pointer) console.warn('No se encontró .pointer (puntero).');
 
       const ctx = canvas.getContext('2d');
       if (!ctx) { console.error('No se pudo obtener contexto 2D del canvas'); return; }
@@ -59,7 +65,7 @@
       let size = Math.min(canvas.width, canvas.height) / (window.devicePixelRatio || 1);
       let cx = size / 2;
       let cy = size / 2;
-      let radius = size / 2 - 10;
+      let radius = size / 2 - 8;
 
       function updateSizes() {
         const rect = canvas.getBoundingClientRect();
@@ -68,52 +74,190 @@
         size = Math.min(canvas.width, canvas.height) / (window.devicePixelRatio || 1);
         cx = size / 2;
         cy = size / 2;
-        radius = size / 2 - 10;
+        radius = size / 2 - 8;
       }
 
-      // Dibuja la ruleta en canvas
+      // Dibuja la ruleta en canvas con borde dorado, luces y knob central
       function drawWheel() {
         const len = prizes.length;
-        const angle = (2 * Math.PI) / len;
+        const segmentAngle = (2 * Math.PI) / len;
+
         ctx.clearRect(0, 0, size, size);
-        ctx.save();
 
-        // Offset para que el segmento 0 esté apuntando arriba
-        const offset = -Math.PI / 2;
+        // Rim outer (gold ring)
+        const rimOuter = radius + 12;
+        const rimInner = radius + 4;
+        // gold gradient
+        const g = ctx.createLinearGradient(0, cy - rimOuter, 0, cy + rimOuter);
+        g.addColorStop(0, '#ffd86b');
+        g.addColorStop(0.5, '#f6bf3a');
+        g.addColorStop(1, '#d99b2a');
+        ctx.beginPath();
+        ctx.arc(cx, cy, rimOuter, 0, Math.PI * 2);
+        ctx.arc(cx, cy, rimInner, Math.PI * 2, 0, true);
+        ctx.closePath();
+        ctx.fillStyle = g;
+        ctx.fill();
 
+        // Inner bevel to separate rim from wheel
+        ctx.beginPath();
+        ctx.arc(cx, cy, rimInner - 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff';
+        ctx.globalAlpha = 0.04;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Segments (use orange tones)
+        const segOuter = radius;
+        const segInner = radius * 0.12; // leave a small center hole for knob
         for (let i = 0; i < len; i++) {
-          const start = offset + i * angle;
-          const end = start + angle;
-
+          const start = -Math.PI / 2 + i * segmentAngle;
+          const end = start + segmentAngle;
           ctx.beginPath();
           ctx.moveTo(cx, cy);
-          ctx.arc(cx, cy, radius, start, end);
+          ctx.arc(cx, cy, segOuter, start, end);
           ctx.closePath();
-          ctx.fillStyle = `hsl(${(i * 360 / len)}, 70%, 60%)`;
+
+          const fillColor = orangeTones[i % orangeTones.length] || '#ff8a3d';
+          // slightly darker gradient for each segment
+          const segG = ctx.createLinearGradient(
+            cx + Math.cos(start + segmentAngle / 2) * segOuter,
+            cy + Math.sin(start + segmentAngle / 2) * segOuter,
+            cx - Math.cos(start + segmentAngle / 2) * segOuter,
+            cy - Math.sin(start + segmentAngle / 2) * segOuter
+          );
+          segG.addColorStop(0, shade(fillColor, -6));
+          segG.addColorStop(1, shade(fillColor, 6));
+          ctx.fillStyle = segG;
           ctx.fill();
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 1;
+
+          // separators
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.arc(cx, cy, segOuter, start, start + 0.006);
+          ctx.lineTo(cx, cy);
+          ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+          ctx.lineWidth = 2;
           ctx.stroke();
 
-          // Texto rotado
+          // label
           ctx.save();
           ctx.translate(cx, cy);
-          const textAngle = start + angle / 2;
+          const textAngle = start + segmentAngle / 2;
           ctx.rotate(textAngle);
-          ctx.fillStyle = '#021226';
+          ctx.fillStyle = '#2b1c00';
           const fontSize = Math.max(12, Math.floor(radius / 8));
           ctx.font = `bold ${fontSize}px sans-serif`;
           ctx.textAlign = 'right';
-          ctx.fillText(prizes[i], radius - 12, 6);
+          // place text a bit inward from outer edge
+          ctx.fillText(prizes[i], segOuter - 18, 6);
           ctx.restore();
         }
 
-        // Centro decorativo
+        // Draw small lights around rim (12 lights)
+        const lights = 12;
+        for (let i = 0; i < lights; i++) {
+          const ang = -Math.PI / 2 + (i / lights) * (Math.PI * 2);
+          const lx = cx + Math.cos(ang) * (rimOuter - 6);
+          const ly = cy + Math.sin(ang) * (rimOuter - 6);
+          drawLight(lx, ly, 6);
+        }
+
+        // Center knob (gold glossy) with star
+        drawCenterKnob(cx, cy, segInner * 2.2);
+
+        // subtle inner shadow
         ctx.beginPath();
-        ctx.arc(cx, cy, 36, 0, Math.PI * 2);
-        ctx.fillStyle = '#021226';
+        ctx.arc(cx, cy, segOuter, 0, Math.PI * 2);
+        const innerShadow = ctx.createRadialGradient(cx, cy, segOuter * 0.6, cx, cy, segOuter);
+        innerShadow.addColorStop(0, 'rgba(0,0,0,0)');
+        innerShadow.addColorStop(1, 'rgba(0,0,0,0.12)');
+        ctx.fillStyle = innerShadow;
         ctx.fill();
-        ctx.restore();
+      }
+
+      // helper: draw a glossy "light" circle
+      function drawLight(x, y, r) {
+        const radial = ctx.createRadialGradient(x - r/3, y - r/3, 1, x, y, r);
+        radial.addColorStop(0, 'rgba(255,255,255,0.95)');
+        radial.addColorStop(0.2, 'rgba(255,245,200,0.98)');
+        radial.addColorStop(1, 'rgba(240,170,40,0.9)');
+        ctx.beginPath();
+        ctx.fillStyle = radial;
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+        // small highlight
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.arc(x - r/3, y - r/3, r/2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // draw center knob with a star
+      function drawCenterKnob(x, y, r) {
+        // outer ring
+        const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+        g.addColorStop(0, '#ffd86b');
+        g.addColorStop(0.5, '#f6bf3a');
+        g.addColorStop(1, '#d99b2a');
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = g;
+        ctx.fill();
+        // inner face
+        ctx.beginPath();
+        ctx.arc(x, y, r * 0.72, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff6d8';
+        ctx.fill();
+        // small highlight
+        ctx.beginPath();
+        ctx.arc(x - r * 0.28, y - r * 0.36, r * 0.22, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.fill();
+
+        // star in center
+        drawStar(x, y, Math.max(6, Math.floor(r * 0.36)), Math.max(3, Math.floor(r * 0.14)), '#ffb84d');
+      }
+
+      // draw a star (centered)
+      function drawStar(cxS, cyS, outerR, innerR, color) {
+        const spikes = 5;
+        let rot = Math.PI / 2 * 3;
+        let x = cxS;
+        let y = cyS;
+        ctx.beginPath();
+        ctx.moveTo(cxS, cyS - outerR);
+        for (let i = 0; i < spikes; i++) {
+          x = cxS + Math.cos(rot) * outerR;
+          y = cyS + Math.sin(rot) * outerR;
+          ctx.lineTo(x, y);
+          rot += Math.PI / spikes;
+          x = cxS + Math.cos(rot) * innerR;
+          y = cyS + Math.sin(rot) * innerR;
+          ctx.lineTo(x, y);
+          rot += Math.PI / spikes;
+        }
+        ctx.lineTo(cxS, cyS - outerR);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        // tiny shadow
+        ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+        ctx.stroke();
+      }
+
+      // small utility: shade color (hex) by percent (-100..100)
+      function shade(hex, percent) {
+        const f = hex.slice(1);
+        const t = percent < 0 ? 0 : 255;
+        const p = Math.abs(percent) / 100;
+        const R = parseInt(f.substring(0,2),16),
+              G = parseInt(f.substring(2,4),16),
+              B = parseInt(f.substring(4,6),16);
+        const newR = Math.round((t - R) * p) + R;
+        const newG = Math.round((t - G) * p) + G;
+        const newB = Math.round((t - B) * p) + B;
+        return `rgb(${newR},${newG},${newB})`;
       }
 
       // Calcula índice del segmento apuntado por el puntero dada la rotación final (grados)
@@ -286,7 +430,7 @@
           prizeTitle.textContent = allowTryAgain ? 'Volvamos a intentar' : '¡Felicidades!';
         }
         if (prizeText) {
-          // Aquí: si es OTRO INTENTO no mostramos la frase (dejamos vacío)
+          // si es OTRO INTENTO no mostramos texto (vacío)
           prizeText.textContent = allowTryAgain ? '' : prize;
         }
         if (tryAgainBtn) {
@@ -297,7 +441,6 @@
             // Sobrescribir comportamiento: cerrar modal y girar inmediatamente
             tryAgainBtn.onclick = function () {
               if (modal) modal.classList.add('hidden');
-              // Pequeña demora para que el modal cierre visualmente
               setTimeout(() => { spin(); }, 120);
             };
           } else {
@@ -317,7 +460,7 @@
       // Listeners seguros
       if (spinBtn) spinBtn.addEventListener('click', spin);
       if (tryAgainBtn && !tryAgainBtn.onclick) {
-        // En caso no se sobrescriba, asegurar que cierra modal y habilita spin
+        // In case default handler
         tryAgainBtn.addEventListener('click', () => {
           if (tryAgainBtn.disabled) return;
           if (modal) modal.classList.add('hidden');
