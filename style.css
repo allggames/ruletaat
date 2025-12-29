@@ -119,10 +119,38 @@ canvas{
   padding:24px;
   border-radius:12px;
   text-align:center;
-  min-width:260px;
+  min-width:300px;
   box-shadow:0 10px 30px rgba(2,6,23,0.4);
 }
 .modal-content h2{ margin-top:0 }
+
+/* Estilos para los botones dentro del modal (Otro intento / Cerrar) */
+.modal-actions{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  margin-top:14px;
+}
+.modal-btn{
+  padding:8px 14px;
+  border-radius:8px;
+  border:1px solid #cfcfcf;
+  background:#f5f5f5;
+  color:#021226;
+  cursor:pointer;
+}
+.modal-btn[disabled]{
+  opacity:0.55;
+  cursor:not-allowed;
+}
+.modal-btn.primary{
+  background:#0284c7;
+  color:white;
+  border-color:transparent;
+}
+
+/* Si quieres mantener compatibilidad con el botón simple "Cerrar" anterior,
+   este selector asegura que el botón tenga apariencia coherente */
 .modal-content button{
   margin-top:12px;
   padding:8px 14px;
