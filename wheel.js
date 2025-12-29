@@ -139,69 +139,81 @@
         ctx.stroke();
       }
 
-      // Función que dibuja texto LINEAL desde el centro hacia afuera (dentro del sector)
-      function drawSegmentTextAlongTriangle(text, midAngle, segOuter, segInner) {
-        ctx.save();
+    // Función que dibuja texto LINEAL desde el centro hacia afuera (dentro del sector)
+// Reemplaza la implementación previa.
+function drawSegmentTextAlongTriangle(text, midAngle, segOuter, segInner) {
+  ctx.save();
 
-        const len = prizes.length;
-        const segHalfAngle = Math.PI / len;
-        // limit radial space available
-        const innerPadding = 10;
-        const outerPadding = 8;
-        const availableRadial = segOuter - segInner - innerPadding - outerPadding;
-        if (availableRadial <= 4) { ctx.restore(); return; }
+  const len = prizes.length;
+  const segHalfAngle = Math.PI / len;
 
-        // max number of lines that can fit radialmente (assuming starting near center)
-        // initial font guess:
-        let fontSize = Math.max(12, Math.floor(availableRadial / 5));
-        fontSize = Math.min(fontSize, 20);
-        let lines = [];
-        let maxLines = Math.max(1, Math.floor(availableRadial / (fontSize + 2)));
+  // Parámetros ajustables:
+  const innerPadding = 8;   // separación mínima desde el borde interno (knob)
+  const outerPadding = 10;  // separación mínima desde el borde externo
+  // factor que controla dónde comienza la primera línea, en fracción del espacio radial disponible.
+  // Valores cercanos a 0.08..0.25 funcionan bien; mientras más pequeño, más cerca del centro.
+  const startOffsetFactor = 0.12;
 
-        // We'll try to fit text by decreasing font size if needed
-        while (fontSize >= 8) {
-          ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
-          // compute startDist near segInner + innerPadding
-          const startDist = segInner + innerPadding + fontSize / 2;
-          // available width at a representative radial distance (we use startDist + some offset)
-          const sampleDist = Math.min(segOuter - outerPadding - fontSize, startDist + Math.floor(availableRadial / 2));
-          const availableWidth = 2 * sampleDist * Math.sin(segHalfAngle) * 0.92;
-          // wrap text with that availableWidth
-          lines = wrapByMeasure(text, availableWidth, ctx);
-          maxLines = Math.max(1, Math.floor(availableRadial / (fontSize + 2)));
-          if (lines.length <= maxLines) break;
-          fontSize--;
-        }
+  // espacio radial utilizable dentro del triángulo
+  const availableRadial = segOuter - segInner - innerPadding - outerPadding;
+  if (availableRadial <= 6) { ctx.restore(); return; }
 
-        // Now draw each line starting from the center outward
-        const lineHeight = fontSize + 2;
-        const startDist = segInner + innerPadding + fontSize / 2;
-        for (let i = 0; i < lines.length; i++) {
-          const dist = startDist + i * lineHeight;
-          if (dist + lineHeight / 2 > segOuter - outerPadding) break; // no more room
-          const x = cx + Math.cos(midAngle) * dist;
-          const y = cy + Math.sin(midAngle) * dist;
+  // Tamaño de fuente inicial (límite superior)
+  let fontSize = Math.min(18, Math.max(12, Math.floor(availableRadial / 4)));
+  let lines = [];
+  // número máximo de líneas que caben radialmente
+  let maxLines = Math.max(1, Math.floor(availableRadial / (fontSize + 2)));
 
-          ctx.save();
-          ctx.translate(x, y);
+  // Distancia radial donde medimos el ancho disponible (un punto intermedio razonable)
+  function computeSampleDist(fs) {
+    // empezar cerca del centro del espacio radial para dar más ancho
+    return segInner + innerPadding + Math.max(fs * 0.6, availableRadial * startOffsetFactor) + Math.floor(availableRadial / 3);
+  }
 
-          // Keep text horizontal; flip 180deg when sector points downward so text stays readable
-          const deg = (midAngle * 180 / Math.PI + 360) % 360;
-          if (deg > 90 && deg < 270) {
-            ctx.rotate(Math.PI);
-          }
+  // Intentamos ajustar fuente y wrapping hasta que quepan
+  while (fontSize >= 8) {
+    ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
+    const sampleDist = computeSampleDist(fontSize);
+    const availableWidth = Math.max(20, 2 * sampleDist * Math.sin(segHalfAngle) * 0.92);
+    lines = wrapByMeasure(text, availableWidth, ctx);
+    maxLines = Math.max(1, Math.floor(availableRadial / (fontSize + 2)));
+    if (lines.length <= maxLines) break;
+    fontSize--;
+  }
 
-          ctx.fillStyle = '#3a1f00';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
-          ctx.fillText(lines[i], 0, 0);
+  // Posición radial inicial (primera línea) — cerca del interior del segmento
+  const startDist = segInner + innerPadding + Math.max(2, Math.floor(fontSize / 2)) + Math.round(availableRadial * startOffsetFactor);
 
-          ctx.restore();
-        }
+  // Dibuja cada línea en orden, desde el centro hacia afuera
+  const lineHeight = fontSize + 2;
+  for (let i = 0; i < lines.length; i++) {
+    const dist = startDist + i * lineHeight;
+    // si se sale del área disponible detenemos
+    if (dist + lineHeight / 2 > segOuter - outerPadding) break;
 
-        ctx.restore();
-      }
+    const x = cx + Math.cos(midAngle) * dist;
+    const y = cy + Math.sin(midAngle) * dist;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Mantener texto HORIZONTAL; girar 180° si sector apunta hacia abajo (para legibilidad)
+    const deg = (midAngle * 180 / Math.PI + 360) % 360;
+    if (deg > 90 && deg < 270) {
+      ctx.rotate(Math.PI);
+    }
+
+    ctx.fillStyle = '#3a1f00';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
+    ctx.fillText(lines[i], 0, 0);
+
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
 
       // Helper wrapByMeasure (single implementation)
       function wrapByMeasure(text, maxWidth, ctxRef) {
