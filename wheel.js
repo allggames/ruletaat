@@ -1,9 +1,5 @@
-// wheel.js — version restaurada + texto curvo por sector (solo este archivo)
-// Restaura la funcionalidad anterior y cambia únicamente cómo se dibuja el texto:
-// ahora el texto sigue la curva exterior de cada sector (carácter por carácter).
-
 (function () {
-  // Premios (tal como tenés)
+  // Lista de premios
   const prizes = [
     "PREMIO A ELECCIÓN",
     "3000 FICHAS",
@@ -15,20 +11,19 @@
     "1500 FICHAS"
   ];
 
-  // Tonos naranja para cada segmento
+  // Palette: tonos de naranja distintos (cada segmento)
   const orangeTones = [
-    '#ff8a3d','#ff7a15','#ff9f4a','#ff6a00',
-    '#ffb069','#ff942a','#ff7f3c','#ffab66'
+    '#ff8a3d', '#ff7a15', '#ff9f4a', '#ff6a00',
+    '#ffb069', '#ff942a', '#ff7f3c', '#ffab66'
   ];
 
   const LOCK_KEY = 'ruleta_locked_date_v1';
 
-  function todayKey(){ return new Date().toISOString().slice(0,10); }
-  function lockForToday(){ try{ localStorage.setItem(LOCK_KEY, todayKey()); }catch(e){} }
-  function isLockedToday(){ try{ return localStorage.getItem(LOCK_KEY) === todayKey(); }catch(e){ return false } }
-  window.__ruleta_clearLock = () => { try { localStorage.removeItem(LOCK_KEY); console.info('Ruleta lock cleared'); } catch(e){} };
+  function todayKey() { return new Date().toISOString().slice(0, 10); }
+  function lockForToday() { try { localStorage.setItem(LOCK_KEY, todayKey()); } catch (e) { } }
+  function isLockedToday() { try { return localStorage.getItem(LOCK_KEY) === todayKey(); } catch (e) { return false } }
+  window.__ruleta_clearLock = () => { try { localStorage.removeItem(LOCK_KEY); console.info('Ruleta lock cleared'); } catch (e) { } };
 
-  // Esperar DOM
   document.addEventListener('DOMContentLoaded', () => {
     try {
       const canvas = document.getElementById('wheel-canvas');
@@ -75,21 +70,23 @@
         radius = size / 2 - 8;
       }
 
-      // util: shade hex
+      // small utility: shade color (hex) by percent (-100..100)
       function shade(hex, percent) {
         const f = hex.slice(1);
         const t = percent < 0 ? 0 : 255;
         const p = Math.abs(percent) / 100;
-        const R = parseInt(f.substring(0,2),16), G = parseInt(f.substring(2,4),16), B = parseInt(f.substring(4,6),16);
+        const R = parseInt(f.substring(0, 2), 16),
+          G = parseInt(f.substring(2, 4), 16),
+          B = parseInt(f.substring(4, 6), 16);
         const newR = Math.round((t - R) * p) + R;
         const newG = Math.round((t - G) * p) + G;
         const newB = Math.round((t - B) * p) + B;
         return `rgb(${newR},${newG},${newB})`;
       }
 
-      // Dibuja luz decorativa
+      // Draw light decoration
       function drawLight(x, y, r) {
-        const radial = ctx.createRadialGradient(x - r/3, y - r/3, 1, x, y, r);
+        const radial = ctx.createRadialGradient(x - r / 3, y - r / 3, 1, x, y, r);
         radial.addColorStop(0, 'rgba(255,255,255,0.95)');
         radial.addColorStop(0.2, 'rgba(255,245,200,0.98)');
         radial.addColorStop(1, 'rgba(240,170,40,0.9)');
@@ -99,11 +96,11 @@
         ctx.fill();
         ctx.beginPath();
         ctx.fillStyle = 'rgba(255,255,255,0.55)';
-        ctx.arc(x - r/3, y - r/3, r/2.5, 0, Math.PI * 2);
+        ctx.arc(x - r / 3, y - r / 3, r / 2.5, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Knob central
+      // Draw center knob
       function drawCenterKnob(x, y, r) {
         const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
         g.addColorStop(0, '#ffd86b');
@@ -142,60 +139,92 @@
         ctx.stroke();
       }
 
-      // --- Nuevo: dibujo de texto CURVO sobre el arco exterior del segmento ---
-      // Dibuja texto centrado a lo largo del arco exterior del segmento.
-      // Esto evita solapes y adapta tamaños; mantiene la tipografía Lexend.
-      function drawTextAlongArc(text, midAngle, outerRadius, options = {}) {
-        const maxArcFraction = 0.78; // cuánto del arco del sector puede usar el texto (0-1)
-        // font base
-        let fontSize = Math.max(12, Math.floor(radius / 9));
+      // ---- NEW: draw text along the SECTOR TRIANGLE (radial column) ----
+      // Text runs along the bisector from outer toward center, stacked lines, always upright.
+      function drawSegmentTextAlongTriangle(text, midAngle, segOuter, segInner) {
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        // Decide orientation so text stays readable
+        let angleDeg = (midAngle * 180 / Math.PI + 360) % 360;
+        let drawAngle = midAngle;
+        if (angleDeg > 90 && angleDeg < 270) drawAngle += Math.PI;
+        ctx.rotate(drawAngle);
+
+        // Available width inside the triangular sector (approx distance from center to outer minus padding)
+        // For text along triangle, max horizontal width is (segOuter - segInner) * sin(segmentHalfAngle) roughly,
+        // but simpler and robust: restrict width to the chord length at 60% of radius distance.
+        const segHalfAngle = Math.PI / prizes.length;
+        // approximate available width near mid-length of the triangle
+        const midRadius = segInner + (segOuter - segInner) * 0.6;
+        const approxHalfChord = Math.sin(segHalfAngle) * midRadius;
+        let maxLineWidth = Math.max(30, approxHalfChord * 1.6); // px, safe margin
+
+        // Start with a font size proportional to wheel
+        let fontSize = Math.max(10, Math.floor((segOuter - segInner) / 5)); // tuned
         ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
         ctx.fillStyle = '#3a1f00';
-        ctx.textBaseline = 'middle';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
 
-        // medida total del texto con separador pequeño entre letras
-        // trabajamos carácter por carácter para curvar correctamente
-        const chars = text.split('');
-        // ancho por letra estimado con measureText for current font
-        const widths = chars.map(ch => ctx.measureText(ch).width);
-        const textWidth = widths.reduce((a,b) => a+b, 0);
-        // Convertimos ancho en px a ángulo en rad sobre la arc (arcLen = angle * r)
-        const availableArc = (2 * Math.PI) / prizes.length * outerRadius * maxArcFraction;
-        // si texto demasiado largo, reducimos fontSize hasta que quepa o alcance mínimo
-        while (textWidth > availableArc && fontSize > 9) {
+        // Wrap by measure so lines fit within maxLineWidth
+        let lines = wrapByMeasure(text, maxLineWidth, ctx);
+
+        // Reduce font if the stack of lines is taller than the triangle height
+        const availableHeight = segOuter - segInner - 8; // padding inside triangle
+        while ((lines.length * (fontSize + 2)) > availableHeight && fontSize > 8) {
           fontSize--;
           ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
-          for (let i = 0; i < chars.length; i++) widths[i] = ctx.measureText(chars[i]).width;
+          lines = wrapByMeasure(text, maxLineWidth, ctx);
         }
-        const finalTextWidth = widths.reduce((a,b) => a+b, 0);
-        // total angle the text will occupy
-        const textAngle = finalTextWidth / outerRadius;
-        // start angle: center the text on midAngle
-        const startAngle = midAngle - textAngle / 2;
 
-        // draw each char rotating around center
-        let angleCursor = startAngle;
-        for (let i = 0; i < chars.length; i++) {
-          const w = widths[i];
-          const charAngle = w / outerRadius;
-          // angle at which to place the character (middle of the char)
-          const charMid = angleCursor + charAngle / 2;
-          // position on arc (a bit inward from rim for readability)
-          const r = outerRadius - (radius * 0.14); // pull text inward a bit
-          const x = cx + Math.cos(charMid) * r;
-          const y = cy + Math.sin(charMid) * r;
-          // rotate canvas so char is tangent to circle
-          ctx.save();
-          ctx.translate(x, y);
-          ctx.rotate(charMid + Math.PI / 2); // rotate so text follows arc
-          ctx.fillText(chars[i], 0, 0);
-          ctx.restore();
-          angleCursor += charAngle;
+        // Place the lines so the top line is nearer the outer edge and subsequent lines go inward
+        // distance from center for the outer-most line:
+        // place first (outer) line at dist = segOuter - (fontSize/2) - 8 padding
+        const outerLineDist = segOuter - (fontSize * 0.6) - 6;
+        const lineHeight = fontSize + 2;
+
+        for (let i = 0; i < lines.length; i++) {
+          const offsetFromOuter = (i) * (lineHeight); // each next line moves inward
+          const dist = outerLineDist - offsetFromOuter;
+          // don't draw if distance goes below segInner + padding
+          if (dist < segInner + fontSize) continue;
+          ctx.fillText(lines[i], dist, 0);
         }
+
+        ctx.restore();
       }
 
-      // draw wheel components
+      // Wrap text using measureText (keeps words intact when possible; breaks long words)
+      function wrapByMeasure(text, maxWidth, ctxRef) {
+        if (!text) return [''];
+        const words = text.split(' ');
+        const lines = [];
+        let cur = '';
+        for (const w of words) {
+          const test = cur ? (cur + ' ' + w) : w;
+          if (ctxRef.measureText(test).width <= maxWidth) {
+            cur = test;
+          } else {
+            if (cur) lines.push(cur);
+            // if single word too wide, break it
+            if (ctxRef.measureText(w).width > maxWidth) {
+              let part = '';
+              for (const ch of w) {
+                if (ctxRef.measureText(part + ch).width <= maxWidth) part += ch;
+                else { if (part) lines.push(part); part = ch; }
+              }
+              if (part) cur = part; else cur = '';
+            } else {
+              cur = w;
+            }
+          }
+        }
+        if (cur) lines.push(cur);
+        return lines;
+      }
+
+      // ---- Wheel drawing (keeps previous look) ----
       function drawWheel() {
         updateSizes();
         ctx.clearRect(0, 0, size, size);
@@ -203,11 +232,13 @@
         const len = prizes.length;
         const segmentAngle = (2 * Math.PI) / len;
 
-        // rim outer (gold ring)
+        // Rim (gold ring)
         const rimOuter = radius + 12;
         const rimInner = radius + 4;
         const g = ctx.createLinearGradient(0, cy - rimOuter, 0, cy + rimOuter);
-        g.addColorStop(0, '#ffd86b'); g.addColorStop(0.5, '#f6bf3a'); g.addColorStop(1, '#d99b2a');
+        g.addColorStop(0, '#ffd86b');
+        g.addColorStop(0.5, '#f6bf3a');
+        g.addColorStop(1, '#d99b2a');
         ctx.beginPath();
         ctx.arc(cx, cy, rimOuter, 0, Math.PI * 2);
         ctx.arc(cx, cy, rimInner, Math.PI * 2, 0, true);
@@ -215,7 +246,7 @@
         ctx.fillStyle = g;
         ctx.fill();
 
-        // inner bevel subtle
+        // subtle bevel
         ctx.beginPath();
         ctx.arc(cx, cy, rimInner - 2, 0, Math.PI * 2);
         ctx.fillStyle = '#fff';
@@ -223,7 +254,7 @@
         ctx.fill();
         ctx.globalAlpha = 1;
 
-        // segments
+        // Segments
         const segOuter = radius;
         const segInner = radius * 0.12;
         for (let i = 0; i < len; i++) {
@@ -255,12 +286,12 @@
           ctx.lineWidth = 2;
           ctx.stroke();
 
-          // draw curved text along arc: center angle = start + half segment
+          // Draw the text ALONG the triangle (radial column)
           const midAngle = start + segmentAngle / 2;
-          drawTextAlongArc(prizes[i], midAngle, segOuter);
+          drawSegmentTextAlongTriangle(prizes[i], midAngle, segOuter, segInner);
         }
 
-        // lights around rim
+        // Lights around rim
         const lights = 12;
         for (let i = 0; i < lights; i++) {
           const ang = -Math.PI / 2 + (i / lights) * (Math.PI * 2);
@@ -269,10 +300,10 @@
           drawLight(lx, ly, 6);
         }
 
-        // center knob
+        // Center knob
         drawCenterKnob(cx, cy, segInner * 2.2);
 
-        // subtle inner shadow
+        // inner shadow
         ctx.beginPath();
         ctx.arc(cx, cy, segOuter, 0, Math.PI * 2);
         const innerShadow = ctx.createRadialGradient(cx, cy, segOuter * 0.6, cx, cy, segOuter);
@@ -282,7 +313,7 @@
         ctx.fill();
       }
 
-      // compute index of winner from final normalized degrees
+      // compute index from rotation
       function computeIndexFromRotation(finalNormalizedDeg) {
         const len = prizes.length;
         const segmentDeg = 360 / len;
@@ -299,7 +330,7 @@
         return bestIdx;
       }
 
-      // Confetti simple
+      // Confetti
       function launchConfettiAt(x, y, opts = {}) {
         const count = opts.count || 80;
         const duration = opts.duration || 2200;
@@ -309,25 +340,25 @@
         c.height = window.innerHeight;
         document.body.appendChild(c);
         const C = c.getContext('2d');
-        const colors = ['#ff4757','#ff6b81','#ffd166','#06d6a0','#118ab2','#845EC2'];
+        const colors = ['#ff4757', '#ff6b81', '#ffd166', '#06d6a0', '#118ab2', '#845EC2'];
         const particles = [];
         for (let i = 0; i < count; i++) {
           particles.push({
-            x: x + (Math.random()-0.5)*80,
-            y: y + (Math.random()-0.5)*40,
-            vx: (Math.random()-0.5) * 8,
-            vy: - (2 + Math.random()*6),
-            size: 6 + Math.random()*8,
-            color: colors[Math.floor(Math.random()*colors.length)],
-            rot: Math.random()*360,
-            vrot: (Math.random()-0.5)*20,
+            x: x + (Math.random() - 0.5) * 80,
+            y: y + (Math.random() - 0.5) * 40,
+            vx: (Math.random() - 0.5) * 8,
+            vy: - (2 + Math.random() * 6),
+            size: 6 + Math.random() * 8,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rot: Math.random() * 360,
+            vrot: (Math.random() - 0.5) * 20,
             life: 0,
-            ttl: 60 + Math.random()*60
+            ttl: 60 + Math.random() * 60
           });
         }
         let rafId;
         function update() {
-          C.clearRect(0,0,c.width,c.height);
+          C.clearRect(0, 0, c.width, c.height);
           for (let p of particles) {
             p.vy += 0.25;
             p.x += p.vx;
@@ -338,7 +369,7 @@
             C.translate(p.x, p.y);
             C.rotate(p.rot * Math.PI / 180);
             C.fillStyle = p.color;
-            C.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+            C.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
             C.restore();
           }
           if (particles.every(p => p.life > p.ttl)) {
@@ -349,10 +380,10 @@
           rafId = requestAnimationFrame(update);
         }
         update();
-        setTimeout(()=> { if (c.parentNode) c.remove(); }, duration + 300);
+        setTimeout(() => { if (c.parentNode) c.remove(); }, duration + 300);
       }
 
-      // sound
+      // Sound
       function playWinSound() {
         try {
           const ctxA = new (window.AudioContext || window.webkitAudioContext)();
@@ -374,11 +405,14 @@
         }
       }
 
-      // spin / finalize (same behavior)
+      // Spin logic
       let isSpinning = false;
       function spin() {
         if (isSpinning) return;
-        if (isLockedToday()) { alert('Ya usaste tu intento por hoy. Vuelve mañana.'); return; }
+        if (isLockedToday()) {
+          alert('Ya usaste tu intento por hoy. Vuelve mañana.');
+          return;
+        }
         isSpinning = true;
         if (spinBtn) spinBtn.disabled = true;
 
@@ -423,7 +457,7 @@
         const wheelRect = (rotor || canvas).getBoundingClientRect();
         const confettiX = Math.round(wheelRect.left + wheelRect.width / 2);
         const confettiY = Math.round(wheelRect.top + 20);
-        setTimeout(()=> {
+        setTimeout(() => {
           launchConfettiAt(confettiX, confettiY, { count: 100, duration: 2300 });
           playWinSound();
         }, 180);
@@ -465,7 +499,7 @@
         isSpinning = false;
       }
 
-      // UI binding
+      // UI listeners
       if (spinBtn) spinBtn.addEventListener('click', spin);
       if (tryAgainBtn && !tryAgainBtn.onclick) {
         tryAgainBtn.addEventListener('click', () => {
@@ -481,23 +515,21 @@
       }
 
       window.addEventListener('resize', () => {
-        try { updateSizes(); drawWheel(); } catch(e) { console.error(e); }
+        try { updateSizes(); drawWheel(); } catch (e) { console.error(e); }
       });
 
-      // Dibuja cuando la fuente esté lista para que measureText sea fiable
+      // Wait for font to be ready, then draw
       function safeDraw() {
         try { drawWheel(); console.info('Wheel inicializada correctamente.'); } catch (e) { console.error('Error en drawWheel', e); }
       }
 
       if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(() => safeDraw()).catch(() => setTimeout(safeDraw, 60));
-        // fallback por si tarda demasiado
         setTimeout(() => safeDraw(), 500);
       } else {
         setTimeout(() => safeDraw(), 40);
       }
 
-      // bloquear si ya jugó hoy
       if (spinBtn) spinBtn.disabled = isLockedToday();
 
     } catch (err) {
