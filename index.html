@@ -4,6 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Ruleta de Premios</title>
+
+  <!-- Lexend font -->
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,22 +21,21 @@
           <canvas id="wheel-canvas" width="500" height="500"></canvas>
         </div>
 
-        <!-- Puntero estilo "teardrop" (apunta hacia el centro) -->
+        <!-- Puntero estilo "teardrop" (apunta hacia el centro) - ahora en naranja oscuro -->
         <svg class="pointer" width="44" height="40" viewBox="0 0 44 40" aria-hidden="true" focusable="false">
-          <!-- Teardrop invertido, punta hacia abajo -->
           <defs>
             <linearGradient id="gPtr" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0" stop-color="#5ed0ff"/>
-              <stop offset="1" stop-color="#0ea6ff"/>
+              <stop offset="0" stop-color="#a34700"/>
+              <stop offset="1" stop-color="#7a2b00"/>
             </linearGradient>
             <radialGradient id="gH" cx="40%" cy="20%" r="60%">
               <stop offset="0" stop-color="rgba(255,255,255,0.9)"/>
               <stop offset="1" stop-color="rgba(255,255,255,0)"/>
             </radialGradient>
           </defs>
-          <path d="M22 2 C10 2 6 18 22 38 C38 18 34 2 22 2 Z" fill="url(#gPtr)" stroke="#0b8dd0" stroke-width="1.5" />
-          <path d="M22 6 C18 6 13 18 22 34 C31 18 26 6 22 6 Z" fill="url(#gH)" opacity="0.28"/>
-          <circle cx="22" cy="9" r="5" fill="rgba(255,255,255,0.55)" opacity="0.25" />
+          <path d="M22 2 C10 2 6 18 22 38 C38 18 34 2 22 2 Z" fill="url(#gPtr)" stroke="#5a2500" stroke-width="1.5" />
+          <path d="M22 6 C18 6 13 18 22 34 C31 18 26 6 22 6 Z" fill="url(#gH)" opacity="0.18"/>
+          <circle cx="22" cy="9" r="5" fill="rgba(255,255,255,0.55)" opacity="0.18" />
         </svg>
       </div>
     </div>
