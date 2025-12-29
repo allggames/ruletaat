@@ -77,140 +77,98 @@
         radius = size / 2 - 8;
       }
 
-      // Dibuja la ruleta en canvas con borde dorado, luces y knob central
-      function drawWheel() {
-        const len = prizes.length;
-        const segmentAngle = (2 * Math.PI) / len;
-
-        ctx.clearRect(0, 0, size, size);
-
-        // Rim outer (gold ring)
-        const rimOuter = radius + 12;
-        const rimInner = radius + 4;
-        // gold gradient
-        const g = ctx.createLinearGradient(0, cy - rimOuter, 0, cy + rimOuter);
-        g.addColorStop(0, '#ffd86b');
-        g.addColorStop(0.5, '#f6bf3a');
-        g.addColorStop(1, '#d99b2a');
-        ctx.beginPath();
-        ctx.arc(cx, cy, rimOuter, 0, Math.PI * 2);
-        ctx.arc(cx, cy, rimInner, Math.PI * 2, 0, true);
-        ctx.closePath();
-        ctx.fillStyle = g;
-        ctx.fill();
-
-        // Inner bevel to separate rim from wheel
-        ctx.beginPath();
-        ctx.arc(cx, cy, rimInner - 2, 0, Math.PI * 2);
-        ctx.fillStyle = '#fff';
-        ctx.globalAlpha = 0.04;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        // Segments (use orange tones)
-        const segOuter = radius;
-        const segInner = radius * 0.12; // leave a small center hole for knob
-        for (let i = 0; i < len; i++) {
-          const start = -Math.PI / 2 + i * segmentAngle;
-          const end = start + segmentAngle;
-          ctx.beginPath();
-          ctx.moveTo(cx, cy);
-          ctx.arc(cx, cy, segOuter, start, end);
-          ctx.closePath();
-
-          const fillColor = orangeTones[i % orangeTones.length] || '#ff8a3d';
-          // slightly darker gradient for each segment
-          const segG = ctx.createLinearGradient(
-            cx + Math.cos(start + segmentAngle / 2) * segOuter,
-            cy + Math.sin(start + segmentAngle / 2) * segOuter,
-            cx - Math.cos(start + segmentAngle / 2) * segOuter,
-            cy - Math.sin(start + segmentAngle / 2) * segOuter
-          );
-          segG.addColorStop(0, shade(fillColor, -8));
-          segG.addColorStop(1, shade(fillColor, 6));
-          ctx.fillStyle = segG;
-          ctx.fill();
-
-          // separators (thin)
-          ctx.beginPath();
-          ctx.moveTo(cx, cy);
-          ctx.arc(cx, cy, segOuter, start, start + 0.006);
-          ctx.lineTo(cx, cy);
-          ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-
-          // label: place text along radius and keep it upright
-          drawSegmentText(prizes[i], start + segmentAngle / 2, segOuter, i);
-        }
-
-        // Draw small lights around rim (12 lights)
-        const lights = 12;
-        for (let i = 0; i < lights; i++) {
-          const ang = -Math.PI / 2 + (i / lights) * (Math.PI * 2);
-          const lx = cx + Math.cos(ang) * (rimOuter - 6);
-          const ly = cy + Math.sin(ang) * (rimOuter - 6);
-          drawLight(lx, ly, 6);
-        }
-
-        // Center knob (gold glossy) with star
-        drawCenterKnob(cx, cy, segInner * 2.2);
-
-        // subtle inner shadow
-        ctx.beginPath();
-        ctx.arc(cx, cy, segOuter, 0, Math.PI * 2);
-        const innerShadow = ctx.createRadialGradient(cx, cy, segOuter * 0.6, cx, cy, segOuter);
-        innerShadow.addColorStop(0, 'rgba(0,0,0,0)');
-        innerShadow.addColorStop(1, 'rgba(0,0,0,0.12)');
-        ctx.fillStyle = innerShadow;
-        ctx.fill();
-      }
-
-      // draw text centered in each sector, rotated so it's readable.
-      function drawSegmentText(text, midAngle, segOuter, idx) {
+      // --------------------
+      // Improved text drawing per-sector:
+      // - measureText wrapping
+      // - auto-shrink font if necessary
+      // - rotate text so it stays upright
+      // --------------------
+      function drawSegmentText(text, midAngle, segOuter) {
         ctx.save();
         ctx.translate(cx, cy);
-        // rotate to middle angle
-        ctx.rotate(midAngle);
-        // if text would be upside-down, rotate 180deg to keep upright
-        const cos = Math.cos(midAngle);
-        if (cos < 0) {
-          ctx.rotate(Math.PI);
+
+        // Normalize angle in degrees 0..360
+        let angleDeg = (midAngle * 180 / Math.PI + 360) % 360;
+
+        // Decide whether to flip text so it's always readable
+        let drawAngle = midAngle;
+        if (angleDeg > 90 && angleDeg < 270) {
+          drawAngle += Math.PI;
         }
-        // font size based on radius
-        const fontSize = Math.max(12, Math.floor(radius / 8));
-        ctx.font = `700 ${fontSize}px Lexend, sans-serif`;
-        ctx.fillStyle = '#3a1f00'; // dark brown for contrast
+        ctx.rotate(drawAngle);
+
+        // maximum width for text (pixels) - leave margins
+        const maxWidth = segOuter * 0.7;
+
+        // start with font size proportional to radius
+        let fontSize = Math.max(12, Math.floor(radius / 8));
+        ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
+        ctx.fillStyle = '#3a1f00';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // place text at about 55% of radius from center so it sits in the segment
-        const dist = segOuter * 0.55;
-        // wrap long texts if needed (basic)
-        const lines = wrapText(text, 14); // max chars per line
+        // wrap using measureText
+        let lines = wrapByMeasure(text, maxWidth, ctx);
+
+        // if too tall, reduce font size
+        const maxTextHeight = segOuter * 0.48; // available vertical space
+        while ((lines.length * (fontSize + 2)) > maxTextHeight && fontSize > 9) {
+          fontSize--;
+          ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
+          lines = wrapByMeasure(text, maxWidth, ctx);
+        }
+
+        const lineHeight = fontSize + 2;
+        const dist = segOuter * 0.56; // distance from center where text is drawn
+
         for (let i = 0; i < lines.length; i++) {
-          const offsetY = (i - (lines.length - 1) / 2) * (fontSize + 2);
+          const offsetY = (i - (lines.length - 1) / 2) * lineHeight;
           ctx.fillText(lines[i], dist, offsetY);
         }
+
         ctx.restore();
       }
 
-      // simple word-wrap by character count (keeps words together if possible)
-      function wrapText(str, maxChars) {
-        if (!str) return [''];
-        const words = str.split(' ');
+      function wrapByMeasure(text, maxWidth, ctxRef) {
+        if (!text) return [''];
+        const words = text.split(' ');
         const lines = [];
         let cur = '';
         for (const w of words) {
-          if ((cur + ' ' + w).trim().length <= maxChars) {
-            cur = (cur + ' ' + w).trim();
+          const test = cur ? (cur + ' ' + w) : w;
+          if (ctxRef.measureText(test).width <= maxWidth) {
+            cur = test;
           } else {
             if (cur) lines.push(cur);
-            cur = w;
+            // if single word too long, break by characters
+            if (ctxRef.measureText(w).width > maxWidth) {
+              const parts = breakWordByMeasure(w, maxWidth, ctxRef);
+              // all but last become full lines
+              for (let i = 0; i < parts.length - 1; i++) lines.push(parts[i]);
+              cur = parts[parts.length - 1];
+            } else {
+              cur = w;
+            }
           }
         }
         if (cur) lines.push(cur);
         return lines;
+      }
+
+      function breakWordByMeasure(word, maxWidth, ctxRef) {
+        const parts = [];
+        let cur = '';
+        for (const ch of word) {
+          const test = cur + ch;
+          if (ctxRef.measureText(test).width <= maxWidth) {
+            cur = test;
+          } else {
+            if (cur) parts.push(cur);
+            cur = ch;
+          }
+        }
+        if (cur) parts.push(cur);
+        return parts;
       }
 
       // helper: draw a glossy "light" circle
@@ -516,7 +474,13 @@
 
       // Inicialización final: adaptar tamaño y dibujar
       updateSizes();
-      drawWheel();
+
+      // Wait for font to load (so measureText is accurate), then draw
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => drawWheel()).catch(() => drawWheel());
+      } else {
+        drawWheel();
+      }
 
       // Si ya hay bloqueo hoy, deshabilitar botón Girar en carga
       if (spinBtn) {
