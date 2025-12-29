@@ -126,12 +126,12 @@
             cx - Math.cos(start + segmentAngle / 2) * segOuter,
             cy - Math.sin(start + segmentAngle / 2) * segOuter
           );
-          segG.addColorStop(0, shade(fillColor, -6));
+          segG.addColorStop(0, shade(fillColor, -8));
           segG.addColorStop(1, shade(fillColor, 6));
           ctx.fillStyle = segG;
           ctx.fill();
 
-          // separators
+          // separators (thin)
           ctx.beginPath();
           ctx.moveTo(cx, cy);
           ctx.arc(cx, cy, segOuter, start, start + 0.006);
@@ -140,18 +140,8 @@
           ctx.lineWidth = 2;
           ctx.stroke();
 
-          // label
-          ctx.save();
-          ctx.translate(cx, cy);
-          const textAngle = start + segmentAngle / 2;
-          ctx.rotate(textAngle);
-          ctx.fillStyle = '#2b1c00';
-          const fontSize = Math.max(12, Math.floor(radius / 8));
-          ctx.font = `bold ${fontSize}px sans-serif`;
-          ctx.textAlign = 'right';
-          // place text a bit inward from outer edge
-          ctx.fillText(prizes[i], segOuter - 18, 6);
-          ctx.restore();
+          // label: place text along radius and keep it upright
+          drawSegmentText(prizes[i], start + segmentAngle / 2, segOuter, i);
         }
 
         // Draw small lights around rim (12 lights)
@@ -174,6 +164,53 @@
         innerShadow.addColorStop(1, 'rgba(0,0,0,0.12)');
         ctx.fillStyle = innerShadow;
         ctx.fill();
+      }
+
+      // draw text centered in each sector, rotated so it's readable.
+      function drawSegmentText(text, midAngle, segOuter, idx) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        // rotate to middle angle
+        ctx.rotate(midAngle);
+        // if text would be upside-down, rotate 180deg to keep upright
+        const cos = Math.cos(midAngle);
+        if (cos < 0) {
+          ctx.rotate(Math.PI);
+        }
+        // font size based on radius
+        const fontSize = Math.max(12, Math.floor(radius / 8));
+        ctx.font = `700 ${fontSize}px Lexend, sans-serif`;
+        ctx.fillStyle = '#3a1f00'; // dark brown for contrast
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // place text at about 55% of radius from center so it sits in the segment
+        const dist = segOuter * 0.55;
+        // wrap long texts if needed (basic)
+        const lines = wrapText(text, 14); // max chars per line
+        for (let i = 0; i < lines.length; i++) {
+          const offsetY = (i - (lines.length - 1) / 2) * (fontSize + 2);
+          ctx.fillText(lines[i], dist, offsetY);
+        }
+        ctx.restore();
+      }
+
+      // simple word-wrap by character count (keeps words together if possible)
+      function wrapText(str, maxChars) {
+        if (!str) return [''];
+        const words = str.split(' ');
+        const lines = [];
+        let cur = '';
+        for (const w of words) {
+          if ((cur + ' ' + w).trim().length <= maxChars) {
+            cur = (cur + ' ' + w).trim();
+          } else {
+            if (cur) lines.push(cur);
+            cur = w;
+          }
+        }
+        if (cur) lines.push(cur);
+        return lines;
       }
 
       // helper: draw a glossy "light" circle
@@ -241,7 +278,6 @@
         ctx.closePath();
         ctx.fillStyle = color;
         ctx.fill();
-        // tiny shadow
         ctx.strokeStyle = 'rgba(0,0,0,0.08)';
         ctx.stroke();
       }
