@@ -139,61 +139,108 @@
         ctx.stroke();
       }
 
-      // ---- NEW: draw text along the SECTOR TRIANGLE (radial column) ----
-      // Text runs along the bisector from outer toward center, stacked lines, always upright.
-      function drawSegmentTextAlongTriangle(text, midAngle, segOuter, segInner) {
-        ctx.save();
-        ctx.translate(cx, cy);
+// Reemplaza drawSegmentTextAlongTriangle por esta versión
+function drawSegmentTextAlongTriangle(text, midAngle, segOuter, segInner) {
+  ctx.save();
 
-        // Decide orientation so text stays readable
-        let angleDeg = (midAngle * 180 / Math.PI + 360) % 360;
-        let drawAngle = midAngle;
-        if (angleDeg > 90 && angleDeg < 270) drawAngle += Math.PI;
-        ctx.rotate(drawAngle);
+  // Distancia radial del centro (px)
+  const segDepth = segOuter - segInner;
+  // padding para que no toque el borde
+  const outerPadding = Math.max(8, Math.floor(segDepth * 0.08));
+  // punto radial donde empieza la primera (más externa) línea
+  const outerLineDist = segOuter - outerPadding;
 
-        // Available width inside the triangular sector (approx distance from center to outer minus padding)
-        // For text along triangle, max horizontal width is (segOuter - segInner) * sin(segmentHalfAngle) roughly,
-        // but simpler and robust: restrict width to the chord length at 60% of radius distance.
-        const segHalfAngle = Math.PI / prizes.length;
-        // approximate available width near mid-length of the triangle
-        const midRadius = segInner + (segOuter - segInner) * 0.6;
-        const approxHalfChord = Math.sin(segHalfAngle) * midRadius;
-        let maxLineWidth = Math.max(30, approxHalfChord * 1.6); // px, safe margin
+  // Decide orientación:
+  // vertical = true -> las letras se rotan para alinearse con la dirección radial
+  // (lectura top->bottom desde borde exterior hacia el centro).
+  // Si querés las letras horizontales pon vertical = false.
+  const vertical = true;
 
-        // Start with a font size proportional to wheel
-        let fontSize = Math.max(10, Math.floor((segOuter - segInner) / 5)); // tuned
-        ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
-        ctx.fillStyle = '#3a1f00';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+  // Calcula ancho máximo razonable dentro del triángulo en la zona media
+  const segHalfAngle = Math.PI / prizes.length;
+  const midRadius = segInner + (segDepth * 0.55);
+  const approxHalfChord = Math.sin(segHalfAngle) * midRadius;
+  let maxLineWidth = Math.max(28, approxHalfChord * 1.6);
 
-        // Wrap by measure so lines fit within maxLineWidth
-        let lines = wrapByMeasure(text, maxLineWidth, ctx);
+  // Fuente inicial
+  let fontSize = Math.max(10, Math.floor(segDepth / 5));
+  ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
+  ctx.fillStyle = '#3a1f00';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
 
-        // Reduce font if the stack of lines is taller than the triangle height
-        const availableHeight = segOuter - segInner - 8; // padding inside triangle
-        while ((lines.length * (fontSize + 2)) > availableHeight && fontSize > 8) {
-          fontSize--;
-          ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
-          lines = wrapByMeasure(text, maxLineWidth, ctx);
+  // Wrap por medida
+  let lines = wrapByMeasure(text, maxLineWidth, ctx);
+
+  // Si ocupa demasiado alto, reducir fontSize
+  const availableHeight = segDepth - 6; // padding
+  while ((lines.length * (fontSize + 2)) > availableHeight && fontSize > 8) {
+    fontSize--;
+    ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
+    lines = wrapByMeasure(text, maxLineWidth, ctx);
+  }
+
+  // Para cada línea calculamos su distancia radial (primera en el exterior)
+  const lineHeight = fontSize + 2;
+  for (let i = 0; i < lines.length; i++) {
+    const dist = outerLineDist - i * lineHeight;
+    // no dibujar si se sale hacia el centro
+    if (dist < segInner + lineHeight) break;
+
+    // coordenadas en el canvas (cartesiano)
+    const x = cx + Math.cos(midAngle) * dist;
+    const y = cy + Math.sin(midAngle) * dist;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    if (vertical) {
+      // rotar para alinear la baseline con la tangente al radio,
+      // así el texto "cae" a lo largo del triángulo (vertical lectura)
+      ctx.rotate(midAngle + Math.PI / 2);
+    } else {
+      // mantener letras horizontales
+      // opcional: girar para que no queden al revés si sector está invertido
+      let deg = (midAngle * 180 / Math.PI + 360) % 360;
+      if (deg > 90 && deg < 270) ctx.rotate(Math.PI);
+    }
+
+    ctx.fillText(lines[i], 0, 0);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+// Helper (si no lo tenés exactamente así, reemplázalo también)
+// wrapByMeasure(text, maxWidth, ctxRef)
+function wrapByMeasure(text, maxWidth, ctxRef) {
+  if (!text) return [''];
+  const words = text.split(' ');
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    const test = cur ? (cur + ' ' + w) : w;
+    if (ctxRef.measureText(test).width <= maxWidth) {
+      cur = test;
+    } else {
+      if (cur) lines.push(cur);
+      // Si la palabra sola es más ancha, partir por caracteres
+      if (ctxRef.measureText(w).width > maxWidth) {
+        let part = '';
+        for (const ch of w) {
+          if (ctxRef.measureText(part + ch).width <= maxWidth) part += ch;
+          else { if (part) lines.push(part); part = ch; }
         }
-
-        // Place the lines so the top line is nearer the outer edge and subsequent lines go inward
-        // distance from center for the outer-most line:
-        // place first (outer) line at dist = segOuter - (fontSize/2) - 8 padding
-        const outerLineDist = segOuter - (fontSize * 0.6) - 6;
-        const lineHeight = fontSize + 2;
-
-        for (let i = 0; i < lines.length; i++) {
-          const offsetFromOuter = (i) * (lineHeight); // each next line moves inward
-          const dist = outerLineDist - offsetFromOuter;
-          // don't draw if distance goes below segInner + padding
-          if (dist < segInner + fontSize) continue;
-          ctx.fillText(lines[i], dist, 0);
-        }
-
-        ctx.restore();
+        if (part) cur = part; else cur = '';
+      } else {
+        cur = w;
       }
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
 
       // Wrap text using measureText (keeps words intact when possible; breaks long words)
       function wrapByMeasure(text, maxWidth, ctxRef) {
