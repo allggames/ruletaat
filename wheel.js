@@ -139,77 +139,94 @@
         ctx.stroke();
       }
 
-// Reemplaza drawSegmentTextAlongTriangle por esta versión
-function drawSegmentTextAlongTriangle(text, midAngle, segOuter, segInner) {
+// Reemplaza por esta función: coloca texto HORIZONTAL, centrado en la bisectriz, ajuste por medida
+function drawSegmentTextInSector(text, midAngle, segOuter, segInner) {
   ctx.save();
 
-  // Distancia radial del centro (px)
-  const segDepth = segOuter - segInner;
-  // padding para que no toque el borde
-  const outerPadding = Math.max(8, Math.floor(segDepth * 0.08));
-  // punto radial donde empieza la primera (más externa) línea
-  const outerLineDist = segOuter - outerPadding;
-
-  // Decide orientación:
-  // vertical = true -> las letras se rotan para alinearse con la dirección radial
-  // (lectura top->bottom desde borde exterior hacia el centro).
-  // Si querés las letras horizontales pon vertical = false.
-  const vertical = true;
-
-  // Calcula ancho máximo razonable dentro del triángulo en la zona media
+  // Parámetros y cálculo de espacio disponible
   const segHalfAngle = Math.PI / prizes.length;
-  const midRadius = segInner + (segDepth * 0.55);
-  const approxHalfChord = Math.sin(segHalfAngle) * midRadius;
-  let maxLineWidth = Math.max(28, approxHalfChord * 1.6);
+  const midRadius = segInner + (segOuter - segInner) * 0.58; // radio donde medimos ancho disponible
+  // ancho aproximado (corda) disponible en esa distancia
+  const availableWidth = 2 * midRadius * Math.sin(segHalfAngle) * 0.9; // multiplicador para margen
+  const availableHeight = segOuter - segInner - 10; // px aprox para apilar líneas
 
-  // Fuente inicial
-  let fontSize = Math.max(10, Math.floor(segDepth / 5));
-  ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
+  // Fuente inicial (proporcional al tamaño del segmento)
+  let fontSize = Math.max(12, Math.floor((segOuter - segInner) / 5));
   ctx.fillStyle = '#3a1f00';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  // Wrap por medida
-  let lines = wrapByMeasure(text, maxLineWidth, ctx);
-
-  // Si ocupa demasiado alto, reducir fontSize
-  const availableHeight = segDepth - 6; // padding
-  while ((lines.length * (fontSize + 2)) > availableHeight && fontSize > 8) {
-    fontSize--;
+  // Wrap y ajuste: reducimos font hasta que las líneas quepan en ancho y alto
+  let lines = [];
+  while (fontSize >= 8) {
     ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
-    lines = wrapByMeasure(text, maxLineWidth, ctx);
+    lines = wrapByMeasure(text, availableWidth, ctx);
+    const totalHeight = lines.length * (fontSize + 2);
+    // comprobar si cabe en ancho y altura
+    const widest = lines.reduce((m, l) => Math.max(m, ctx.measureText(l).width), 0);
+    if (widest <= availableWidth && totalHeight <= availableHeight) break;
+    fontSize--;
   }
 
-  // Para cada línea calculamos su distancia radial (primera en el exterior)
+  // Posición central para la primera (o única) línea:
+  // colocamos las líneas centradas en la bisectriz, la primera línea se ubica hacia el exterior
   const lineHeight = fontSize + 2;
-  for (let i = 0; i < lines.length; i++) {
-    const dist = outerLineDist - i * lineHeight;
-    // no dibujar si se sale hacia el centro
-    if (dist < segInner + lineHeight) break;
+  const outerPadding = 6;
+  const outerStartDist = segOuter - outerPadding - (lineHeight / 2); // distancia radial de la primer línea (más exterior)
 
-    // coordenadas en el canvas (cartesiano)
+  // Colocar cada línea: la i-ésima se ubica más hacia el centro
+  for (let i = 0; i < lines.length; i++) {
+    const dist = outerStartDist - i * lineHeight;
+    if (dist < segInner + lineHeight) break; // no dibujar si sale del triángulo
+
+    // coordenadas en canvas:
     const x = cx + Math.cos(midAngle) * dist;
     const y = cy + Math.sin(midAngle) * dist;
 
     ctx.save();
     ctx.translate(x, y);
 
-    if (vertical) {
-      // rotar para alinear la baseline con la tangente al radio,
-      // así el texto "cae" a lo largo del triángulo (vertical lectura)
-      ctx.rotate(midAngle + Math.PI / 2);
-    } else {
-      // mantener letras horizontales
-      // opcional: girar para que no queden al revés si sector está invertido
-      let deg = (midAngle * 180 / Math.PI + 360) % 360;
-      if (deg > 90 && deg < 270) ctx.rotate(Math.PI);
+    // Mantener texto HORIZONTAL pero evitar que aparezca al revés
+    // Si el sector apunta hacia abajo (ángulos entre 90 y 270) rotamos 180° para que el texto siga legible
+    const deg = (midAngle * 180 / Math.PI + 360) % 360;
+    if (deg > 90 && deg < 270) {
+      ctx.rotate(Math.PI);
     }
-
+    ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
     ctx.fillText(lines[i], 0, 0);
     ctx.restore();
   }
 
   ctx.restore();
+}
+
+// Helper wrapByMeasure (si no la tenés exactamente así, reemplázala también)
+function wrapByMeasure(text, maxWidth, ctxRef) {
+  if (!text) return [''];
+  const words = text.split(' ');
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    const test = cur ? (cur + ' ' + w) : w;
+    if (ctxRef.measureText(test).width <= maxWidth) {
+      cur = test;
+    } else {
+      if (cur) lines.push(cur);
+      // si la palabra sola es más ancha que maxWidth, partir por caracteres
+      if (ctxRef.measureText(w).width > maxWidth) {
+        let part = '';
+        for (const ch of w) {
+          if (ctxRef.measureText(part + ch).width <= maxWidth) part += ch;
+          else { if (part) lines.push(part); part = ch; }
+        }
+        if (part) cur = part; else cur = '';
+      } else {
+        cur = w;
+      }
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
 }
 
 // Helper (si no lo tenés exactamente así, reemplázalo también)
