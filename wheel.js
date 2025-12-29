@@ -27,6 +27,7 @@
       const spinBtn = document.getElementById('spin-btn');
       const modal = document.getElementById('prize-modal');
       const prizeText = document.getElementById('prize-text');
+      const prizeTitle = document.getElementById('prize-title') || (modal && modal.querySelector('h2'));
       const closeModal = document.getElementById('close-modal');
       const tryAgainBtn = document.getElementById('try-again-btn'); // opcional
       const pointer = document.querySelector('.pointer');
@@ -100,7 +101,6 @@
           const textAngle = start + angle / 2;
           ctx.rotate(textAngle);
           ctx.fillStyle = '#021226';
-          // Ajustar tamaño de fuente si la rueda es más pequeña
           const fontSize = Math.max(12, Math.floor(radius / 8));
           ctx.font = `bold ${fontSize}px sans-serif`;
           ctx.textAlign = 'right';
@@ -281,13 +281,34 @@
           if (spinBtn) spinBtn.disabled = false;
         }
 
-        // Actualizar modal
-        if (prizeText) prizeText.textContent = prize;
+        // Actualizar modal contenido y botones según el tipo de premio
+        if (prizeTitle) {
+          prizeTitle.textContent = allowTryAgain ? 'Volvamos a intentar' : '¡Felicidades!';
+        }
+        if (prizeText) {
+          // Si es otro intento podemos mostrar una frase distinta o solo el texto del premio.
+          prizeText.textContent = prize;
+        }
         if (tryAgainBtn) {
-          tryAgainBtn.disabled = !allowTryAgain;
-          tryAgainBtn.title = allowTryAgain ? 'Cierra el modal y podrás girar otra vez' : 'No disponible para este premio';
+          if (allowTryAgain) {
+            tryAgainBtn.disabled = false;
+            tryAgainBtn.textContent = 'Otra vuelta';
+            tryAgainBtn.title = 'Haz otra vuelta ahora';
+            // Sobrescribir comportamiento: cerrar modal y girar inmediatamente
+            tryAgainBtn.onclick = function () {
+              if (modal) modal.classList.add('hidden');
+              // Pequeña demora para que el modal cierre visualmente
+              setTimeout(() => { spin(); }, 120);
+            };
+          } else {
+            tryAgainBtn.disabled = true;
+            tryAgainBtn.textContent = 'Otro intento';
+            tryAgainBtn.title = 'No disponible para este premio';
+            tryAgainBtn.onclick = null;
+          }
         }
 
+        // Mostrar modal si existe
         if (modal) modal.classList.remove('hidden');
 
         isSpinning = false;
@@ -295,7 +316,8 @@
 
       // Listeners seguros
       if (spinBtn) spinBtn.addEventListener('click', spin);
-      if (tryAgainBtn) {
+      if (tryAgainBtn && !tryAgainBtn.onclick) {
+        // En caso no se sobrescriba, asegurar que cierra modal y habilita spin
         tryAgainBtn.addEventListener('click', () => {
           if (tryAgainBtn.disabled) return;
           if (modal) modal.classList.add('hidden');
