@@ -4,10 +4,10 @@
     "PREMIO A ELECCIÓN",
     "3000 FICHAS",
     "PREMIO SORPRESA",
-    "100% DE BONUS DOBLE",
-    "200% DE BONUS DOBLE",
+    "100% BONO DOBLE",
+    "200% BONO DOBLE",
     "OTRO INTENTO",
-    "150% BONUS DOBLE",
+    "150% BONO DOBLE",
     "1500 FICHAS"
   ];
 
@@ -167,90 +167,123 @@
         return lines;
       }
 
-      // NEW: center text inside each sector (option 2)
-      // Place up to 2 lines centered in the radial middle of the triangular sector.
-      function drawSegmentTextCentered(text, midAngle, segOuter, segInner) {
-        ctx.save();
+   // drawSegmentTextCentered — centra 1–2 líneas en la franja media del sector,
+// reduce la fuente hasta que todo quepa, y si no alcanza trunca con "…".
+function drawSegmentTextCentered(text, midAngle, segOuter, segInner) {
+  ctx.save();
 
-        const len = prizes.length;
-        const segHalfAngle = Math.PI / len;
+  const len = prizes.length;
+  const segHalfAngle = Math.PI / len;
 
-        // paddings / ajustes
-        const innerPadding = Math.max(10, Math.round(radius * 0.04));
-        const outerPadding = Math.max(8, Math.round(radius * 0.03));
-        const maxFont = 18;
-        const minFont = 10;
-        const maxLines = 2; // center strategy uses up to 2 lines
+  // ajustes
+  const innerPadding = Math.max(10, Math.round(radius * 0.04));
+  const outerPadding = Math.max(8, Math.round(radius * 0.03));
+  const maxFont = 18;
+  const minFont = 10;
+  const maxLines = 2; // centrado: máximo 2 líneas
 
-        const availRadial = segOuter - segInner - innerPadding - outerPadding;
-        if (availRadial <= 6) { ctx.restore(); return; }
+  const availRadial = segOuter - segInner - innerPadding - outerPadding;
+  if (availRadial <= 6) { ctx.restore(); return; }
 
-        // We'll rotate context so bisector is +X, then create a clip to be safe
-        ctx.translate(cx, cy);
-        ctx.rotate(midAngle);
+  // rotamos de forma que la bisectriz quede en +X y aplicamos clip de sector
+  ctx.translate(cx, cy);
+  ctx.rotate(midAngle);
 
-        // build clip (annular sector in local coords)
-        const start = -segHalfAngle;
-        const end = segHalfAngle;
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(start) * segInner, Math.sin(start) * segInner);
-        ctx.arc(0, 0, segInner, start, end, false);
-        ctx.lineTo(Math.cos(end) * segOuter, Math.sin(end) * segOuter);
-        ctx.arc(0, 0, segOuter, end, start, true);
-        ctx.closePath();
-        ctx.clip();
+  const start = -segHalfAngle;
+  const end = segHalfAngle;
+  ctx.beginPath();
+  ctx.moveTo(Math.cos(start) * segInner, Math.sin(start) * segInner);
+  ctx.arc(0, 0, segInner, start, end, false);
+  ctx.lineTo(Math.cos(end) * segOuter, Math.sin(end) * segOuter);
+  ctx.arc(0, 0, segOuter, end, start, true);
+  ctx.closePath();
+  ctx.clip();
 
-        // choose a radial position roughly mid-way (where text block will be centered)
-        const midRadius = Math.round(segInner + innerPadding + (availRadial / 2));
+  // Ubicación radial preferida: un poco más hacia el borde para más ancho
+  const midRadius = Math.round(segInner + innerPadding + (availRadial * 0.6));
 
-        // approximate available width at midRadius (chord)
-        const availWidth = Math.max(20, 2 * midRadius * Math.sin(segHalfAngle) * 0.92);
+  // ancho aproximado en esa radial (cuerda)
+  const availWidth = Math.max(20, 2 * midRadius * Math.sin(segHalfAngle) * 0.92);
 
-        // find font size that fits text into maxLines at availWidth
-        let fs = Math.min(maxFont, Math.max(12, Math.floor(availRadial / 4)));
-        let lines = [];
-        while (fs >= minFont) {
-          ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
-          lines = wrapByMeasure(text, availWidth, ctx).slice(0, maxLines);
-          // if wrapped into <= maxLines and each line width <= availWidth -> good
-          const widest = lines.reduce((m, l) => Math.max(m, ctx.measureText(l).width), 0);
-          if (lines.length <= maxLines && widest <= availWidth) break;
-          fs--;
-        }
-        if (lines.length === 0) { lines = [String(text)]; fs = minFont; ctx.font = `700 ${fs}px 'Lexend', sans-serif`; }
+  // ayuda: recortar texto con "..." hasta que entre en maxWidth
+  function truncateToWidth(t, maxWidth) {
+    if (ctx.measureText(t).width <= maxWidth) return t;
+    const ell = '…';
+    let s = t;
+    while (s.length > 0 && ctx.measureText(s + ell).width > maxWidth) {
+      s = s.slice(0, -1);
+    }
+    return s + ell;
+  }
 
-        // compute block height and starting y to center vertically
-        const lineHeight = fs + 2;
-        const blockHeight = lines.length * lineHeight;
-        const yStart = -blockHeight / 2 + lineHeight / 2; // local y positions
+  // intentar tamaños de fuente decrecientes hasta que wrapByMeasure produzca <= maxLines
+  let fs = Math.min(maxFont, Math.max(12, Math.floor(availRadial / 4)));
+  let lines = [];
+  while (fs >= minFont) {
+    ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
+    lines = wrapByMeasure(text, availWidth, ctx);
+    if (lines.length <= maxLines) break;
+    fs--;
+  }
 
-        // avoid knob overlap: if midRadius - blockHeight/2 < segInner + innerPadding, shift outward
-        const minAllowedDist = segInner + innerPadding + Math.ceil(blockHeight / 2);
-        let drawRadius = midRadius;
-        if (drawRadius < minAllowedDist) drawRadius = minAllowedDist;
-        const maxAllowedDist = segOuter - outerPadding - Math.ceil(blockHeight / 2);
-        if (drawRadius > maxAllowedDist) drawRadius = maxAllowedDist;
-
-        // If sector points downward we flip 180deg so text is upright
-        const deg = (midAngle * 180 / Math.PI + 360) % 360;
-        const flipped = (deg > 90 && deg < 270);
-        if (flipped) {
-          ctx.rotate(Math.PI); // rotate 180 so text reads upright
-        }
-
-        // draw each line centered at (drawRadius, y)
-        ctx.fillStyle = '#3a1f00';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
-        for (let i = 0; i < lines.length; i++) {
-          const y = yStart + i * lineHeight;
-          ctx.fillText(lines[i], drawRadius, y);
-        }
-
-        ctx.restore();
+  // Si aún hay > maxLines con la fuente mínima, fusionamos el resto en la última línea y truncamos
+  if (lines.length > maxLines) {
+    // obtener las palabras y reconstruir hasta maxLines-1, el resto en la última
+    const allWords = String(text).split(' ');
+    const firstLines = [];
+    let wi = 0;
+    for (let i = 0; i < maxLines - 1; i++) {
+      let cur = '';
+      while (wi < allWords.length) {
+        const test = cur ? (cur + ' ' + allWords[wi]) : allWords[wi];
+        if (ctx.measureText(test).width <= availWidth) {
+          cur = test;
+          wi++;
+        } else break;
       }
+      if (cur) firstLines.push(cur);
+      else break;
+    }
+    // remaining words -> last line, join and truncate to fit
+    const remaining = allWords.slice(wi).join(' ');
+    const last = truncateToWidth(remaining, availWidth);
+    lines = firstLines.concat([last]);
+    // if firstLines is empty (no room), force last as truncated full text
+    if (lines.length === 0) lines = [truncateToWidth(String(text), availWidth)];
+  }
 
+  // block metrics and position
+  ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
+  const lineHeight = fs + 2;
+  const blockHeight = lines.length * lineHeight;
+
+  // compute draw radius and y positions so the block is centered radially
+  const minAllowedDist = segInner + innerPadding + Math.ceil(blockHeight / 2);
+  const maxAllowedDist = segOuter - outerPadding - Math.ceil(blockHeight / 2);
+  let drawRadius = Math.round(segInner + innerPadding + availRadial * 0.5);
+  if (drawRadius < minAllowedDist) drawRadius = minAllowedDist;
+  if (drawRadius > maxAllowedDist) drawRadius = maxAllowedDist;
+
+  // vertical centering inside the sector band (local Y)
+  const yStart = -Math.round(blockHeight / 2) + Math.round(lineHeight / 2);
+
+  // si el sector "mira abajo", rotamos 180° para que el texto siempre quede upright
+  const deg = (midAngle * 180 / Math.PI + 360) % 360;
+  const flipped = (deg > 90 && deg < 270);
+  if (flipped) ctx.rotate(Math.PI);
+
+  // dibujar centrado (x=drawRadius)
+  ctx.fillStyle = '#3a1f00';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
+  for (let i = 0; i < lines.length; i++) {
+    const y = yStart + i * lineHeight;
+    ctx.fillText(lines[i], drawRadius, y);
+  }
+
+  ctx.restore();
+}
       // ---- Wheel drawing (keeps previous look) ----
       function drawWheel() {
         updateSizes();
