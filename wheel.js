@@ -1,5 +1,6 @@
 (function () {
   // Lista de premios
+  // 1. Lista de Textos (Círculo exterior)
   const prizes = [
     "PREMIO A ELECCIÓN",
     "3000 FICHAS",
@@ -9,6 +10,20 @@
     "OTRO INTENTO",
     "150% BONO DOBLE",
     "1500 FICHAS"
+  ];
+
+  // 2. Lista de Emojis (Círculo interior - "Abajo")
+  // El primero lo dejé vacío porque no pusiste uno en tu lista, 
+  // pero puedes poner "⭐" o lo que gustes entre las comillas.
+  const emojis = [
+    "",           // Para PREMIO A ELECCIÓN
+    "💰",         // Para 3000 FICHAS
+    "🎁",         // Para PREMIO SORPRESA
+    "⚡",         // Para 100% BONO DOBLE
+    "🔥",         // Para 200% BONO DOBLE
+    "👀",         // Para OTRO INTENTO
+    "✨",         // Para 150% BONO DOBLE
+    "💰"          // Para 1500 FICHAS
   ];
 
   // Palette: tonos de naranja distintos (cada segmento)
