@@ -167,133 +167,154 @@
         return lines;
       }
 
-      // Función FINAL: dibuja texto radial desde el CENTRO hacia afuera sin solapamientos
-      function drawSegmentTextAlongTriangle(text, midAngle, segOuter, segInner) {
-        ctx.save();
+// drawSegmentTextAlongTriangle — dibuja texto radial desde el centro hacia afuera
+// dentro del sector y recortado (clip) para evitar solapamientos.
+function drawSegmentTextAlongTriangle(text, midAngle, segOuter, segInner) {
+  ctx.save();
 
-        const len = prizes.length;
-        const segHalfAngle = Math.PI / len;
+  const len = prizes.length;
+  const segHalfAngle = Math.PI / len;
 
-        // Ajustes finos (podés ajustar aquí si querés más/menos espacio)
-        const innerPadding = Math.max(10, Math.round(radius * 0.04));   // espacio desde el borde interno (knob)
-        const outerPadding = Math.max(8, Math.round(radius * 0.03));    // espacio desde el borde externo
-        const maxFont = 18;
-        const minFont = 10;
+  // paddings / ajustes
+  const innerPadding = Math.max(10, Math.round(radius * 0.04));
+  const outerPadding = Math.max(8, Math.round(radius * 0.03));
+  const maxFont = 18;
+  const minFont = 10;
 
-        const availRadial = segOuter - segInner - innerPadding - outerPadding;
-        if (availRadial <= 6) { ctx.restore(); return; }
+  const availRadial = segOuter - segInner - innerPadding - outerPadding;
+  if (availRadial <= 6) { ctx.restore(); return; }
 
-        // helper: approx chord width at radius r (width available along radial column)
-        const chordWidthAt = (r) => Math.max(12, 2 * r * Math.sin(segHalfAngle) * 0.94);
+  // start/end angles of this sector
+  const startAngle = midAngle - segHalfAngle;
+  const endAngle = midAngle + segHalfAngle;
 
-        // helper: how many lines fit for a font size
-        const maxLinesForFont = (fs) => Math.max(1, Math.floor(availRadial / (fs + 2)));
-        const startDistForFont = (fs) => segInner + innerPadding + Math.max(2, Math.round(fs / 2));
+  // Build a clipping path shaped like the annular sector (segInner..segOuter between start..end)
+  ctx.beginPath();
+  // inner arc
+  ctx.moveTo(cx + Math.cos(startAngle) * segInner, cy + Math.sin(startAngle) * segInner);
+  ctx.arc(cx, cy, segInner, startAngle, endAngle, false);
+  // outer arc
+  ctx.lineTo(cx + Math.cos(endAngle) * segOuter, cy + Math.sin(endAngle) * segOuter);
+  ctx.arc(cx, cy, segOuter, endAngle, startAngle, true);
+  ctx.closePath();
+  ctx.clip();
 
-        // Try decreasing font until all words fit into the allowed number of lines,
-        // checking width per line at each radial position.
-        let fs = Math.min(maxFont, Math.max(12, Math.floor(availRadial / 4)));
-        let finalLines = null;
+  // helper: chord width at radius r (approx ancho disponible en esa radial)
+  const chordWidthAt = (r) => Math.max(12, 2 * r * Math.sin(segHalfAngle) * 0.94);
 
-        fontSearch:
-        while (fs >= minFont) {
-          ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
-          const lineHeight = fs + 2;
-          const maxLines = maxLinesForFont(fs);
-          const words = String(text).split(' ');
-          const lines = [];
-          let wi = 0;
+  // helpers for lines & distances
+  const lineHeightFor = (fs) => fs + 2;
+  const maxLinesForFont = (fs) => Math.max(1, Math.floor(availRadial / lineHeightFor(fs)));
+  const startDistForFont = (fs) => segInner + innerPadding + Math.max(2, Math.round(fs / 2));
 
-          for (let li = 0; li < maxLines && wi < words.length; li++) {
-            const dist = startDistForFont(fs) + li * lineHeight;
-            const availW = chordWidthAt(dist);
-            let cur = '';
+  // Try font sizes from maxFont down until all words fit
+  let fs = Math.min(maxFont, Math.max(12, Math.floor(availRadial / 4)));
+  let chosen = null;
 
-            while (wi < words.length) {
-              const w = words[wi];
-              const test = cur ? (cur + ' ' + w) : w;
-              const width = ctx.measureText(test).width;
-              if (width <= availW) {
-                cur = test;
-                wi++;
-              } else {
-                // if the single word is too wide to fit an empty line, break it by characters
-                if (!cur && ctx.measureText(w).width > availW) {
-                  let part = '';
-                  let j = 0;
-                  while (j < w.length) {
-                    const ch = w[j];
-                    if (ctx.measureText(part + ch).width <= availW) {
-                      part += ch;
-                      j++;
-                    } else {
-                      break;
-                    }
-                  }
-                  if (part.length > 0) {
-                    lines.push(part);
-                    // replace current word with remaining substring
-                    words[wi] = w.slice(part.length);
-                    // do not increment wi so remaining chars handled next iteration
-                    continue;
-                  } else {
-                    // can't fit even a char (very narrow), break out
-                    break;
-                  }
-                }
-                break;
-              }
+  fontSearch:
+  while (fs >= minFont) {
+    ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
+    const lineH = lineHeightFor(fs);
+    const maxLines = maxLinesForFont(fs);
+
+    // copy words array to mutate
+    const words = String(text).split(' ').slice();
+    const lines = [];
+
+    for (let li = 0; li < maxLines && words.length > 0; li++) {
+      const dist = startDistForFont(fs) + li * lineH;
+      const availW = chordWidthAt(dist);
+      let cur = '';
+
+      while (words.length > 0) {
+        const w = words[0];
+        const test = cur ? (cur + ' ' + w) : w;
+        if (ctx.measureText(test).width <= availW) {
+          cur = test;
+          words.shift();
+        } else {
+          // If the single word is longer than the available width and cur is empty, split the word by chars
+          if (!cur && ctx.measureText(w).width > availW) {
+            let part = '';
+            let idx = 0;
+            while (idx < w.length) {
+              const ch = w[idx];
+              if (ctx.measureText(part + ch).width <= availW) {
+                part += ch;
+                idx++;
+              } else break;
             }
-            if (cur) lines.push(cur);
+            if (part.length > 0) {
+              lines.push(part);
+              // replace the word with its remaining suffix
+              const remaining = w.slice(part.length);
+              if (remaining.length > 0) {
+                words[0] = remaining;
+              } else {
+                words.shift();
+              }
+              // continue to next line
+              continue;
+            } else {
+              // Can't fit any char (very narrow) — break
+              break;
+            }
           }
-
-          if (wi >= words.length) {
-            finalLines = { fs, lines };
-            break fontSearch;
-          }
-          fs--;
+          break;
         }
-
-        if (!finalLines) {
-          // fallback: single line with smallest font
-          fs = minFont;
-          finalLines = { fs, lines: [String(text)] };
-          ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
-        }
-
-        const lines = finalLines.lines;
-        const lineHeight = finalLines.fs + 2;
-        const startDist = startDistForFont(finalLines.fs);
-
-        // rotate context so bisectriz points to +X
-        ctx.translate(cx, cy);
-        ctx.rotate(midAngle);
-
-        const deg = (midAngle * 180 / Math.PI + 360) % 360;
-        const flipped = (deg > 90 && deg < 270);
-
-        // draw each line from center outward
-        for (let i = 0; i < lines.length; i++) {
-          const dist = startDist + i * lineHeight;
-          if (dist + lineHeight / 2 > segOuter - outerPadding) break;
-
-          ctx.save();
-          if (!flipped) {
-            ctx.translate(dist, 0);
-            ctx.textAlign = 'left';
-          } else {
-            ctx.translate(-dist, 0);
-            ctx.textAlign = 'right';
-          }
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = '#3a1f00';
-          ctx.font = `700 ${finalLines.fs}px 'Lexend', sans-serif`;
-          ctx.fillText(lines[i], 0, 0);
-          ctx.restore();
-        }
-
-        ctx.restore();
       }
+
+      if (cur) lines.push(cur);
+    }
+
+    if (words.length === 0) {
+      chosen = { fs, lines };
+      break fontSearch;
+    }
+    fs--;
+  }
+
+  if (!chosen) {
+    // fallback — one line with minimal font
+    fs = minFont;
+    chosen = { fs, lines: [String(text)] };
+    ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
+  }
+
+  // Prepare to draw: rotate context so bisectriz apunta a +X
+  ctx.translate(cx, cy);
+  ctx.rotate(midAngle);
+
+  const deg = (midAngle * 180 / Math.PI + 360) % 360;
+  const flipped = (deg > 90 && deg < 270);
+
+  const lines = chosen.lines;
+  const lineH = chosen.fs + 2;
+  const startDist = startDistForFont(chosen.fs);
+
+  // Draw each line from center outward; clipping prevents crosses into other sectors
+  for (let i = 0; i < lines.length; i++) {
+    const dist = startDist + i * lineH;
+    if (dist + lineH / 2 > segOuter - outerPadding) break;
+
+    ctx.save();
+    if (!flipped) {
+      ctx.translate(dist, 0);
+      ctx.textAlign = 'left';
+    } else {
+      ctx.translate(-dist, 0);
+      ctx.textAlign = 'right';
+    }
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#3a1f00';
+    ctx.font = `700 ${chosen.fs}px 'Lexend', sans-serif`;
+    ctx.fillText(lines[i], 0, 0);
+    ctx.restore();
+  }
+
+  // restore (removes clip)
+  ctx.restore();
+}
 
       // ---- Wheel drawing (keeps previous look) ----
       function drawWheel() {
