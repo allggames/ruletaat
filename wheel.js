@@ -167,123 +167,63 @@
         return lines;
       }
 
-   // drawSegmentTextCentered — centra 1–2 líneas en la franja media del sector,
-// reduce la fuente hasta que todo quepa, y si no alcanza trunca con "…".
-function drawSegmentTextCentered(text, midAngle, segOuter, segInner) {
-  ctx.save();
+  // NUEVA FUNCIÓN: Dibuja el texto curvado siguiendo el arco exterior
+      function drawSegmentTextCurved(text, startAngle, endAngle, radius) {
+        if (!text) return;
+        ctx.save();
 
-  const len = prizes.length;
-  const segHalfAngle = Math.PI / len;
+        // 1. Configuración de estilo
+        ctx.fillStyle = '#3a1f00'; // Color marrón oscuro (puedes cambiarlo a blanco '#ffffff' si prefieres)
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
 
-  // ajustes
-  const innerPadding = Math.max(10, Math.round(radius * 0.04));
-  const outerPadding = Math.max(8, Math.round(radius * 0.03));
-  const maxFont = 18;
-  const minFont = 10;
-  const maxLines = 2; // centrado: máximo 2 líneas
+        // 2. Calcular tamaño de fuente dinámico
+        // Estimamos la longitud del arco disponible
+        const angleSpan = endAngle - startAngle;
+        const arcLength = radius * angleSpan;
+        // Cálculo aproximado para que el texto quepa en el 80% del arco
+        // Ajusta el '1.4' si la fuente queda muy grande o pequeña
+        let fontSize = Math.floor((arcLength * 0.8) / text.length * 1.4);
+        fontSize = Math.min(fontSize, 22); // Tamaño máximo
+        fontSize = Math.max(fontSize, 12); // Tamaño mínimo
 
-  const availRadial = segOuter - segInner - innerPadding - outerPadding;
-  if (availRadial <= 6) { ctx.restore(); return; }
+        ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
 
-  // rotamos de forma que la bisectriz quede en +X y aplicamos clip de sector
-  ctx.translate(cx, cy);
-  ctx.rotate(midAngle);
+        // 3. Cálculos de posición angular
+        // Medimos el ancho total que ocupará el texto recto
+        const totalTextWidth = ctx.measureText(text).width;
+        // Convertimos ese ancho lineal a un ángulo basado en el radio
+        const totalTextAngle = totalTextWidth / radius;
+        // Calculamos el ángulo inicial para que el texto quede centrado en el gajo
+        // (Ángulo medio del gajo) - (Mitad del ángulo del texto)
+        let currentAngle = (startAngle + angleSpan / 2) - (totalTextAngle / 2);
 
-  const start = -segHalfAngle;
-  const end = segHalfAngle;
-  ctx.beginPath();
-  ctx.moveTo(Math.cos(start) * segInner, Math.sin(start) * segInner);
-  ctx.arc(0, 0, segInner, start, end, false);
-  ctx.lineTo(Math.cos(end) * segOuter, Math.sin(end) * segOuter);
-  ctx.arc(0, 0, segOuter, end, start, true);
-  ctx.closePath();
-  ctx.clip();
+        // 4. Dibujar letra por letra
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            const charWidth = ctx.measureText(char).width;
+            // El ángulo central de esta letra específica
+            const charCenterAngle = currentAngle + (charWidth / radius) / 2;
 
-  // Ubicación radial preferida: un poco más hacia el borde para más ancho
-  const midRadius = Math.round(segInner + innerPadding + (availRadial * 0.6));
+            ctx.save();
+            // a) Mover el origen al centro de la ruleta
+            ctx.translate(cx, cy);
+            // b) Rotar hacia la posición de la letra
+            ctx.rotate(charCenterAngle);
+            // c) Moverse hacia afuera hasta el radio deseado
+            ctx.translate(radius, 0);
+            // d) Rotar 90 grados (Math.PI/2) para que la base de la letra apunte al centro
+            ctx.rotate(Math.PI / 2);
+            // e) Dibujar la letra en el origen local (0,0)
+            ctx.fillText(char, 0, 0);
+            ctx.restore();
 
-  // ancho aproximado en esa radial (cuerda)
-  const availWidth = Math.max(20, 2 * midRadius * Math.sin(segHalfAngle) * 0.92);
+            // Avanzar el ángulo para la siguiente letra
+            currentAngle += charWidth / radius;
+        }
 
-  // ayuda: recortar texto con "..." hasta que entre en maxWidth
-  function truncateToWidth(t, maxWidth) {
-    if (ctx.measureText(t).width <= maxWidth) return t;
-    const ell = '…';
-    let s = t;
-    while (s.length > 0 && ctx.measureText(s + ell).width > maxWidth) {
-      s = s.slice(0, -1);
-    }
-    return s + ell;
-  }
-
-  // intentar tamaños de fuente decrecientes hasta que wrapByMeasure produzca <= maxLines
-  let fs = Math.min(maxFont, Math.max(12, Math.floor(availRadial / 4)));
-  let lines = [];
-  while (fs >= minFont) {
-    ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
-    lines = wrapByMeasure(text, availWidth, ctx);
-    if (lines.length <= maxLines) break;
-    fs--;
-  }
-
-  // Si aún hay > maxLines con la fuente mínima, fusionamos el resto en la última línea y truncamos
-  if (lines.length > maxLines) {
-    // obtener las palabras y reconstruir hasta maxLines-1, el resto en la última
-    const allWords = String(text).split(' ');
-    const firstLines = [];
-    let wi = 0;
-    for (let i = 0; i < maxLines - 1; i++) {
-      let cur = '';
-      while (wi < allWords.length) {
-        const test = cur ? (cur + ' ' + allWords[wi]) : allWords[wi];
-        if (ctx.measureText(test).width <= availWidth) {
-          cur = test;
-          wi++;
-        } else break;
+        ctx.restore();
       }
-      if (cur) firstLines.push(cur);
-      else break;
-    }
-    // remaining words -> last line, join and truncate to fit
-    const remaining = allWords.slice(wi).join(' ');
-    const last = truncateToWidth(remaining, availWidth);
-    lines = firstLines.concat([last]);
-    // if firstLines is empty (no room), force last as truncated full text
-    if (lines.length === 0) lines = [truncateToWidth(String(text), availWidth)];
-  }
-
-  // block metrics and position
-  ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
-  const lineHeight = fs + 2;
-  const blockHeight = lines.length * lineHeight;
-
-  // compute draw radius and y positions so the block is centered radially
-  const minAllowedDist = segInner + innerPadding + Math.ceil(blockHeight / 2);
-  const maxAllowedDist = segOuter - outerPadding - Math.ceil(blockHeight / 2);
-  let drawRadius = Math.round(segInner + innerPadding + availRadial * 0.5);
-  if (drawRadius < minAllowedDist) drawRadius = minAllowedDist;
-  if (drawRadius > maxAllowedDist) drawRadius = maxAllowedDist;
-
-  // vertical centering inside the sector band (local Y)
-  const yStart = -Math.round(blockHeight / 2) + Math.round(lineHeight / 2);
-
-  // si el sector "mira abajo", rotamos 180° para que el texto siempre quede upright
-  const deg = (midAngle * 180 / Math.PI + 360) % 360;
-  const flipped = (deg > 90 && deg < 270);
-  if (flipped) ctx.rotate(Math.PI);
-
-  // dibujar centrado (x=drawRadius)
-  ctx.fillStyle = '#3a1f00';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = `700 ${fs}px 'Lexend', sans-serif`;
-  for (let i = 0; i < lines.length; i++) {
-    const y = yStart + i * lineHeight;
-    ctx.fillText(lines[i], drawRadius, y);
-  }
-
-  ctx.restore();
-}
       // ---- Wheel drawing (keeps previous look) ----
       function drawWheel() {
         updateSizes();
@@ -346,9 +286,11 @@ function drawSegmentTextCentered(text, midAngle, segOuter, segInner) {
           ctx.lineWidth = 2;
           ctx.stroke();
 
-          // Draw centered text (one or two lines) in the middle of each sector
-          const midAngle = start + segmentAngle / 2;
-          drawSegmentTextCentered(prizes[i], midAngle, segOuter, segInner);
+          // Definimos el radio donde se asentará el texto.
+          // segOuter es el borde extremo. Restamos unos 25px para meterlo hacia adentro.
+          // Ajusta este número (25) si quieres el texto más cerca o lejos del borde.
+          const textRadius = segOuter - 25;
+          drawSegmentTextCurved(prizes[i], start, end, textRadius);
         }
 
         // Lights around rim
