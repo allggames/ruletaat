@@ -11,8 +11,16 @@
     "1500 FICHAS"
   ];
 
+  // USAMOS CÓDIGOS UNICODE PARA QUE SE VEAN EN CUALQUIER CELULAR
   const emojis = [
-    "🌟", "🔱", "🎁", "⚡", "🔥", "👀", "✨", "💰"
+    "\uD83C\uDF1F", // 🌟 PREMIO A ELECCIÓN
+    "\uD83D\uDD31", // 🔱 3000 FICHAS
+    "\uD83C\uDF81", // 🎁 PREMIO SORPRESA
+    "\u26A1",       // ⚡ 100% BONO DOBLE
+    "\uD83D\uDD25", // 🔥 200% BONO DOBLE
+    "\uD83D\uDC40", // 👀 OTRO INTENTO
+    "\u2728",       // ✨ 150% BONO DOBLE
+    "\uD83D\uDCB0"  // 💰 1500 FICHAS
   ];
 
   const orangeTones = [
@@ -70,7 +78,7 @@
     function updateDimensions() {
       if (isSpinning) return;
       const rect = canvas.getBoundingClientRect();
-      const cssWidth = rect.width || 340; // Default a 340 si falla
+      const cssWidth = rect.width || 340; 
       const dpr = window.devicePixelRatio || 1;
       
       canvas.width = cssWidth * dpr;
@@ -101,7 +109,8 @@
       g.addColorStop(0, '#ffd86b'); g.addColorStop(1, '#d99b2a');
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
       ctx.beginPath(); ctx.arc(x, y, r * 0.72, 0, Math.PI * 2); ctx.fillStyle = '#fff6d8'; ctx.fill();
-      // Estrella simple
+      
+      // Estrella dibujada vectorialmente (No depende de fuentes)
       ctx.beginPath();
       const outerR = r * 0.4, innerR = r * 0.16;
       for (let i=0; i<5; i++) {
@@ -112,21 +121,16 @@
       ctx.closePath(); ctx.fillStyle = '#ffb84d'; ctx.fill();
     }
 
-    // *** MAGIA: TEXTO QUE SE AUTO-AJUSTA ***
+    // Texto curvado
     function drawSegmentTextCurved(text, startAngle, endAngle, rad) {
         if (!text) return;
         ctx.save();
         ctx.fillStyle = '#3a1f00'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
         
-        // 1. Calculamos el espacio disponible (arco)
         const arcLength = rad * (endAngle - startAngle);
-        
-        // 2. Empezamos con un tamaño de fuente ideal (12% del radio)
         let fontSize = Math.floor(rad * 0.12); 
         ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
 
-        // 3. SI EL TEXTO ES MUY LARGO, ACHICAMOS LA FUENTE HASTA QUE QUEPA
-        // "Mientras el texto mida más del 85% del hueco, achica la letra"
         while (ctx.measureText(text).width > arcLength * 0.85 && fontSize > 8) {
              fontSize--;
              ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
@@ -144,25 +148,17 @@
         ctx.restore();
     }
 
-function drawEmojiCentered(emoji, startAngle, endAngle, rad) {
+    // Emoji con fuente de sistema
+    function drawEmojiCentered(emoji, startAngle, endAngle, rad) {
         if (!emoji) return;
-        // Calculamos tamaño (15% del radio)
         const fontSize = Math.floor(radius * 0.15); 
         ctx.save();
-        
-        // CAMBIO CLAVE: Usamos solo 'sans-serif'. 
-        // iOS y Android detectarán automáticamente sus emojis nativos.
-        ctx.font = `${fontSize}px sans-serif`; 
-        
-        ctx.textAlign = 'center'; 
-        ctx.textBaseline = 'middle';
+        // Usamos una pila de fuentes segura para movil
+        ctx.font = `${fontSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         const midAngle = startAngle + (endAngle - startAngle) / 2;
-        ctx.translate(cx, cy);      
-        ctx.rotate(midAngle);       
-        ctx.translate(rad, 0);   
-        ctx.rotate(Math.PI / 2);    
-        ctx.fillText(emoji, 0, 0);
-        ctx.restore();
+        ctx.translate(cx, cy); ctx.rotate(midAngle); ctx.translate(rad, 0); ctx.rotate(Math.PI / 2);
+        ctx.fillText(emoji, 0, 0); ctx.restore();
     }
 
     function drawWheel() {
@@ -170,14 +166,12 @@ function drawEmojiCentered(emoji, startAngle, endAngle, rad) {
       const len = prizes.length;
       const segmentAngle = (2 * Math.PI) / len;
 
-      // Borde
       const rimOuter = radius + 8, rimInner = radius;
       const g = ctx.createLinearGradient(0, cy - rimOuter, 0, cy + rimOuter);
       g.addColorStop(0, '#ffd86b'); g.addColorStop(1, '#d99b2a');
       ctx.beginPath(); ctx.arc(cx, cy, rimOuter, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
       ctx.beginPath(); ctx.arc(cx, cy, rimInner, 0, Math.PI * 2); ctx.fillStyle = '#d99b2a'; ctx.fill();
 
-      // Segmentos
       const segOuter = radius - 2;
       for (let i = 0; i < len; i++) {
         const start = -Math.PI / 2 + i * segmentAngle;
@@ -190,13 +184,10 @@ function drawEmojiCentered(emoji, startAngle, endAngle, rad) {
         ctx.fillStyle = segG; ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 2; ctx.stroke();
 
-        // TEXTO: Lo ponemos un poco más adentro (-15% del radio)
         drawSegmentTextCurved(prizes[i], start, end, segOuter * 0.85);
-        // EMOJI: Lo ponemos más al centro (-35% del radio)
         drawEmojiCentered(emojis[i], start, end, segOuter * 0.65);
       }
 
-      // Luces
       const lights = 12;
       for (let i = 0; i < lights; i++) {
         const ang = -Math.PI/2 + (i/lights)*Math.PI*2;
@@ -204,7 +195,6 @@ function drawEmojiCentered(emoji, startAngle, endAngle, rad) {
         if (lightsOn ? (i%2===0) : (i%2!==0)) drawLightOn(lx, ly, 5); else drawLightOff(lx, ly, 5);
       }
       
-      // Centro
       drawCenterKnob(cx, cy, radius * 0.20 * 2.2);
     }
 
