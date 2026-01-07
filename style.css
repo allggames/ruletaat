@@ -372,3 +372,106 @@ canvas{
     padding: 20px;
   }
 }
+
+
+/* =========================================
+   ESTILOS DE PANTALLA DE CARGA
+   ========================================= */
+#loading-screen {
+  position: fixed;
+  inset: 0; /* Ocupa toda la pantalla */
+  background: linear-gradient(180deg, #ffb26b 0%, #ff7a00 100%); /* Fondo naranja similar al juego */
+  z-index: 99999; /* Por encima de absolutamente todo */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: opacity 0.6s ease-out, visibility 0.6s; /* Para el efecto de desvanecer al final */
+}
+
+/* Clase para ocultarlo suavemente */
+#loading-screen.fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* --- Fondo de Tridentes Tenues --- */
+.loading-bg-icons {
+  position: absolute;
+  inset: 0;
+  z-index: -1; /* Detrás del logo */
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  align-content: space-around;
+  pointer-events: none;
+  opacity: 0.12; /* MUY TENUE, casi transparente */
+  filter: blur(1px);
+  overflow: hidden;
+}
+
+.loading-bg-icons span {
+  font-size: 40px;
+  margin: 20px;
+  /* Animación sutil de flotación para que no sea estático */
+  animation: floatLoading 4s ease-in-out infinite alternate;
+}
+
+/* Pequeña variación en la animación de los tridentes */
+.loading-bg-icons span:nth-child(even) { animation-duration: 5s; animation-delay: 1s; font-size: 30px; }
+.loading-bg-icons span:nth-child(3n) { animation-duration: 6s; animation-delay: 0.5s; font-size: 50px; }
+
+@keyframes floatLoading {
+  from { transform: translateY(0) rotate(-5deg); }
+  to { transform: translateY(-15px) rotate(5deg); }
+}
+
+/* --- Contenido Central --- */
+.loading-content {
+  text-align: center;
+  position: relative;
+  z-index: 2;
+  width: 90%;
+  max-width: 400px;
+}
+
+/* Logo */
+.loading-logo {
+  max-width: 180px; /* Ajusta este tamaño según tu logo */
+  height: auto;
+  margin-bottom: 30px;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+  animation: pulseLogo 2s infinite ease-in-out;
+}
+@keyframes pulseLogo {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+/* Barra de Carga (Contenedor gris/oscuro) */
+.loading-bar-container {
+  width: 100%;
+  height: 20px;
+  background-color: rgba(0, 0, 0, 0.3); /* Fondo oscuro de la barra */
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+  margin-bottom: 10px;
+}
+
+/* Barra de Carga (Relleno dorado/naranja) */
+.loading-bar-fill {
+  height: 100%;
+  width: 0%; /* Empieza vacía */
+  background: linear-gradient(90deg, #ffd86b, #ff7a00); /* Degradado dorado/naranja */
+  border-radius: 10px;
+  transition: width 0.3s ease-out; /* Animación suave al llenarse */
+}
+
+.loading-text {
+  color: rgba(255,255,255,0.8);
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
