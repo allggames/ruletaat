@@ -9,11 +9,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const barContainer = document.querySelector('.loading-bar-container');
     const bgIconContainer = document.querySelector('.loading-bg-icons');
 
-    // 1. PREPARAR SONIDO
     const startSound = new Audio('sonido1.mp3'); 
     startSound.volume = 0.5;
 
-    // 2. GENERAR TRIDENTES ALEATORIOS
     if (bgIconContainer) {
         bgIconContainer.innerHTML = ''; 
         const numIcons = 40; 
@@ -32,7 +30,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 3. BARRA DE CARGA
     let progress = 0;
     const interval = setInterval(() => {
         progress += Math.random() * 4; 
@@ -55,7 +52,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         }
                     });
                 } else {
-                    // Fallback
                     if (loadingScreen) loadingScreen.style.display = 'none';
                 }
             }, 500); 
@@ -64,10 +60,33 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // =========================================
-// LÓGICA DE LA RULETA
+// LÓGICA DE LA RULETA (CON PROBABILIDADES)
 // =========================================
 (function () {
-  const prizes = ["PREMIO A ELECCIÓN", "3000 FICHAS", "PREMIO SORPRESA", "100% BONO DOBLE", "200% BONO DOBLE", "OTRO INTENTO", "150% BONO DOBLE", "1500 FICHAS"];
+  const prizes = [
+      "PREMIO A ELECCIÓN", // Indice 0
+      "3000 FICHAS",       // Indice 1
+      "PREMIO SORPRESA",   // Indice 2
+      "100% BONO DOBLE",   // Indice 3
+      "200% BONO DOBLE",   // Indice 4
+      "OTRO INTENTO",      // Indice 5
+      "150% BONO DOBLE",   // Indice 6
+      "1500 FICHAS"        // Indice 7
+  ];
+
+  // --- CONFIGURACIÓN DE PROBABILIDAD (Suman 100 idealmente) ---
+  const prizeWeights = [
+      2,   // 0. PREMIO A ELECCIÓN (2% - Muy difícil)
+      1,   // 1. 3000 FICHAS (1% - Casi imposible)
+      15,  // 2. PREMIO SORPRESA (15%)
+      20,  // 3. 100% BONO DOBLE (20%)
+      10,  // 4. 200% BONO DOBLE (10%)
+      30,  // 5. OTRO INTENTO (30% - El más común)
+      17,  // 6. 150% BONO DOBLE (17%)
+      5    // 7. 1500 FICHAS (5% - Difícil)
+  ];
+  // -----------------------------------------------------------
+
   const emojis = ["\uD83C\uDF1F", "\uD83D\uDD31", "\uD83C\uDF81", "\u26A1", "\uD83D\uDD25", "\uD83D\uDC40", "\u2728", "\uD83D\uDCB0"];
   const orangeTones = ['#ff8a3d', '#ff7a15', '#ff9f4a', '#ff6a00', '#ffb069', '#ff942a', '#ff7f3c', '#ffab66'];
 
@@ -75,13 +94,11 @@ document.addEventListener("DOMContentLoaded", () => {
   let isSpinning = false;
   let size = 0, cx = 0, cy = 0, radius = 0;
 
-  // --- CARGAR IMAGEN DEL LOGO CENTRAL ---
   const centerLogoImg = new Image();
   centerLogoImg.src = 'logo1.png';
   let logoLoaded = false;
   centerLogoImg.onload = () => { logoLoaded = true; };
 
-  // --- CLAVES DE MEMORIA Y FECHAS ---
   const LOCK_KEY = 'ruleta_locked_date_v1';
   const PRIZE_KEY = 'ruleta_saved_prize_v1';
   const TIME_KEY = 'ruleta_saved_time_v1';
@@ -99,7 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return `rgb(${Math.round((t-R)*p)+R},${Math.round((t-G)*p)+G},${Math.round((t-B)*p)+B})`;
   }
 
-  // --- INICIO PRINCIPAL ---
   document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('wheel-canvas');
     const rotor = document.getElementById('wheel-rotor');
@@ -115,7 +131,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // 1. TAMAÑO
     function updateDimensions() {
       if (isSpinning) return;
       const rect = canvas.getBoundingClientRect();
@@ -128,7 +143,6 @@ document.addEventListener("DOMContentLoaded", () => {
       drawWheel();
     }
 
-    // 2. DIBUJO DE LUCES Y TEXTO
     function drawLightOn(x, y, r) {
       const radial = ctx.createRadialGradient(x-r/3, y-r/3, 1, x, y, r);
       radial.addColorStop(0, '#fff'); radial.addColorStop(1, '#f0aa28');
@@ -177,7 +191,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.fillText(emoji, 0, 0); ctx.restore();
     }
 
-    // 3. DIBUJAR RULETA (AQUÍ ESTÁ LA CORRECCIÓN)
     function drawWheel() {
       ctx.clearRect(0, 0, size, size);
       const len = prizes.length; const segmentAngle = (2 * Math.PI) / len;
@@ -190,7 +203,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const segOuter = radius - 2;
       for (let i = 0; i < len; i++) {
-        // CORRECCIÓN: Restamos (segmentAngle / 2) al inicio para CENTRAR el gajo en el puntero
         const start = -Math.PI/2 - segmentAngle/2 + i * segmentAngle; 
         const end = start + segmentAngle;
         
@@ -212,26 +224,63 @@ document.addEventListener("DOMContentLoaded", () => {
       drawCenterKnob(cx, cy, radius * 0.20 * 2.2);
     }
 
-    // 4. LÓGICA DE GIRO
+    // --- FUNCIÓN PARA ELEGIR PREMIO SEGÚN PESO ---
+    function getWeightedRandomIndex() {
+        // Sumamos todos los pesos
+        const totalWeight = prizeWeights.reduce((a, b) => a + b, 0);
+        // Elegimos un número al azar entre 0 y el total
+        let random = Math.random() * totalWeight;
+        
+        // Recorremos para ver dónde cae
+        for (let i = 0; i < prizeWeights.length; i++) {
+            if (random < prizeWeights[i]) {
+                return i;
+            }
+            random -= prizeWeights[i];
+        }
+        return 0; // Fallback
+    }
+
+    // 4. LÓGICA DE GIRO (AHORA CON ÁNGULO CALCULADO)
     function spin() {
       if (isSpinning) return;
       if (isLockedToday()) { alert('Ya usaste tu intento por hoy. Vuelve mañana.'); return; }
       isSpinning = true; spinBtn.disabled = true;
-      const stopAt = 360 * (5 + Math.floor(Math.random()*3)) + Math.random() * 360;
+
+      // 1. Decidimos el premio YA MISMO usando las probabilidades
+      const targetIndex = getWeightedRandomIndex();
+      
+      // 2. Calculamos el ángulo exacto para caer en ese premio
+      // Queremos que el premio 'targetIndex' termine arriba (en -90 grados visuales, o 0 grados logicos)
+      // Cada gajo mide 360/8 = 45 grados.
+      const segmentDeg = 360 / prizes.length;
+      
+      // El centro del gajo 'i' está en i * segmentDeg.
+      // Para que ese gajo llegue arriba (0 grados relativos), hay que girar (360 - i*segmentDeg).
+      // Le agregamos 5 vueltas completas (360*5) para emoción.
+      // Le agregamos un pequeño aleatorio (-20 a +20 grados) para que no caiga siempre en el centro exacto del gajo.
+      
+      const randomOffset = (Math.random() * (segmentDeg * 0.8)) - (segmentDeg * 0.4); 
+      const targetRotation = (360 * 5) + (360 - (targetIndex * segmentDeg)) + randomOffset;
+
       if (rotor) {
         rotor.style.transition = 'transform 5s cubic-bezier(.14,.99,.38,1)';
-        rotor.style.transform = `rotate(${stopAt}deg)`;
-        const onEnd = () => { rotor.removeEventListener('transitionend', onEnd); finalizeRotation(stopAt); };
+        rotor.style.transform = `rotate(${targetRotation}deg)`;
+        
+        const onEnd = () => { 
+            rotor.removeEventListener('transitionend', onEnd); 
+            finalizeRotation(targetRotation, targetIndex); // Pasamos el índice que ya elegimos
+        };
         rotor.addEventListener('transitionend', onEnd);
       }
     }
 
-    function finalizeRotation(stopAt) {
+    function finalizeRotation(stopAt, knownIndex) {
       const finalDeg = stopAt % 360;
       if (rotor) { rotor.style.transition = 'none'; rotor.style.transform = `rotate(${finalDeg}deg)`; }
-      const segmentDeg = 360 / prizes.length;
-      const index = Math.floor(((360 - finalDeg + segmentDeg/2) % 360) / segmentDeg);
-      const prize = prizes[index];
+      
+      const prize = prizes[knownIndex];
+      
       if (pointer) { pointer.classList.remove('bounce'); void pointer.offsetWidth; pointer.classList.add('bounce'); }
       const rect = rotor.getBoundingClientRect();
       launchConfetti(rect.left + rect.width/2, rect.top);
@@ -239,7 +288,6 @@ document.addEventListener("DOMContentLoaded", () => {
       showPrizeModal(prize);
     }
 
-    // 5. MODAL
     function showPrizeModal(prize, savedTime = null) {
         const prizeNormalized = String(prize || '').trim().toLowerCase();
         const isTryAgain = prizeNormalized.startsWith('otro intento');
