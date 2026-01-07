@@ -201,8 +201,8 @@ canvas{
 
 /* Botón "OTRA VUELTA" (Verde brillante) */
 #try-again-btn {
-  background-color: #28a745; /* Verde */
-  color: #ffffff;            /* Texto Blanco */
+  background-color: #ffc107; /* Dorado */
+  color: #000;            /* Texto negro */
   border: 2px solid #1e7e34;
   padding: 10px 25px;
   font-size: 16px;
