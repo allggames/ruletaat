@@ -27,15 +27,15 @@
     '#ffb069', '#ff942a', '#ff7f3c', '#ffab66'
   ];
 
-  // --- VARIABLES DE ESTADO ---
-  let lightsOn = true; 
-  let isSpinning = false;
+  // --- VARIABLES GLOBALES ---
+  let lightsOn = true;      // Controla el parpadeo
+  let isSpinning = false;   // Controla si está girando
   
-  // Variables globales de tamaño (para que no se recalculen a cada rato)
-  let size = 500; 
-  let cx = 250;
-  let cy = 250;
-  let radius = 240;
+  // Variables de dimensiones (Se calculan una sola vez para evitar que se agrande)
+  let size = 0;
+  let cx = 0;
+  let cy = 0;
+  let radius = 0;
 
   // --- UTILIDADES ---
   const LOCK_KEY = 'ruleta_locked_date_v1';
@@ -53,339 +53,359 @@
     return `rgb(${Math.round((t - R) * p) + R},${Math.round((t - G) * p) + G},${Math.round((t - B) * p) + B})`;
   }
 
-  // --- DIBUJO DE LUCES (ENCENDIDA / APAGADA) ---
-  function drawLight(ctx, x, y, r) {
-    // Luz brillante
-    const radial = ctx.createRadialGradient(x - r / 3, y - r / 3, 1, x, y, r);
-    radial.addColorStop(0, 'rgba(255,255,255,0.95)');
-    radial.addColorStop(0.2, 'rgba(255,245,200,0.98)');
-    radial.addColorStop(1, 'rgba(240,170,40,0.9)');
-    ctx.beginPath();
-    ctx.fillStyle = radial;
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-    // Brillo extra
-    ctx.beginPath();
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.arc(x - r / 3, y - r / 3, r / 2.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  document.addEventListener('DOMContentLoaded', () => {
+    // Referencias al DOM
+    const canvas = document.getElementById('wheel-canvas');
+    const rotor = document.getElementById('wheel-rotor');
+    const spinBtn = document.getElementById('spin-btn');
+    const modal = document.getElementById('prize-modal');
+    const prizeText = document.getElementById('prize-text');
+    const prizeTitle = document.getElementById('prize-title') || (modal && modal.querySelector('h2'));
+    const closeModal = document.getElementById('close-modal');
+    const tryAgainBtn = document.getElementById('try-again-btn');
+    const pointer = document.querySelector('.pointer');
 
-  function drawDarkLight(ctx, x, y, r) {
-    // Luz apagada (marrón oscuro)
-    ctx.beginPath();
-    ctx.fillStyle = '#7a2b00'; 
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.arc(x - r / 3, y - r / 3, r / 2.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
+    if (!canvas) { console.error('Error: No se encontró el canvas'); return; }
+    const ctx = canvas.getContext('2d');
 
-  // --- DIBUJO DEL CENTRO (ESTRELLA) ---
-  function drawCenterKnob(ctx, x, y, r) {
-    const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
-    g.addColorStop(0, '#ffd86b');
-    g.addColorStop(0.5, '#f6bf3a');
-    g.addColorStop(1, '#d99b2a');
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = g;
-    ctx.fill();
-    // Aro interior claro
-    ctx.beginPath();
-    ctx.arc(x, y, r * 0.72, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff6d8';
-    ctx.fill();
-    // Sombra
-    ctx.beginPath();
-    ctx.arc(x - r * 0.28, y - r * 0.36, r * 0.22, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.fill();
-    // Estrella
-    drawStar(ctx, x, y, Math.max(6, Math.floor(r * 0.36)), Math.max(3, Math.floor(r * 0.14)), '#ffb84d');
-  }
+    // --- 1. FUNCIÓN DE TAMAÑO (SOLO SE LLAMA AL INICIO Y RESIZE) ---
+    function updateDimensions() {
+      // Si está girando, NO recalculamos para evitar deformaciones
+      if (isSpinning) return;
 
-  function drawStar(ctx, cxS, cyS, outerR, innerR, color) {
-    const spikes = 5;
-    let rot = Math.PI / 2 * 3;
-    ctx.beginPath();
-    ctx.moveTo(cxS, cyS - outerR);
-    for (let i = 0; i < spikes; i++) {
-      ctx.lineTo(cxS + Math.cos(rot) * outerR, cyS + Math.sin(rot) * outerR);
-      rot += Math.PI / spikes;
-      ctx.lineTo(cxS + Math.cos(rot) * innerR, cyS + Math.sin(rot) * innerR);
-      rot += Math.PI / spikes;
+      const rect = canvas.getBoundingClientRect();
+      const cssWidth = rect.width || 500;
+      const dpr = window.devicePixelRatio || 1;
+      
+      // Configurar resolución interna del canvas
+      canvas.width = cssWidth * dpr;
+      canvas.height = cssWidth * dpr;
+      
+      // Configurar tamaño visual (CSS)
+      canvas.style.width = cssWidth + 'px';
+      canvas.style.height = cssWidth + 'px';
+      
+      // Normalizar sistema de coordenadas
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Guardar valores globales
+      size = cssWidth;
+      cx = size / 2;
+      cy = size / 2;
+      radius = (size / 2) - 10; // Margen para luces
+
+      // Redibujar inmediatamente
+      drawWheel();
     }
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-  }
 
-  // --- DIBUJO DE TEXTO ---
-  function drawSegmentTextCurved(ctx, text, startAngle, endAngle, radius, fixedFontSize = null) {
-    if (!text) return;
-    ctx.save();
-    ctx.fillStyle = '#3a1f00'; 
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
+    // --- 2. FUNCIONES DE DIBUJO AUXILIARES ---
 
-    let fontSize;
-    if (fixedFontSize) {
-        fontSize = fixedFontSize;
-    } else {
-        const arcLength = radius * (endAngle - startAngle);
-        fontSize = Math.floor((arcLength * 0.8) / text.length * 1.4);
+    // Dibuja la luz ENCENDIDA
+    function drawLightOn(x, y, r) {
+      const radial = ctx.createRadialGradient(x - r / 3, y - r / 3, 1, x, y, r);
+      radial.addColorStop(0, 'rgba(255,255,255,0.95)');
+      radial.addColorStop(0.2, 'rgba(255,245,200,0.98)');
+      radial.addColorStop(1, 'rgba(240,170,40,0.9)');
+      ctx.beginPath();
+      ctx.fillStyle = radial;
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.arc(x - r / 3, y - r / 3, r / 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Dibuja la luz APAGADA (Color oscuro)
+    function drawLightOff(x, y, r) {
+      ctx.beginPath();
+      ctx.fillStyle = '#7a2b00'; // Marrón oscuro
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'; // Sombra interna
+      ctx.arc(x - r / 3, y - r / 3, r / 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Dibuja la estrella central (ESTÁTICA)
+    function drawCenterKnob(x, y, r) {
+      const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+      g.addColorStop(0, '#ffd86b');
+      g.addColorStop(0.5, '#f6bf3a');
+      g.addColorStop(1, '#d99b2a');
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.fill();
+      
+      // Círculo interior claro
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.72, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff6d8';
+      ctx.fill();
+      
+      // Estrella
+      drawStar(x, y, Math.max(6, Math.floor(r * 0.36)), Math.max(3, Math.floor(r * 0.14)), '#ffb84d');
+    }
+
+    function drawStar(cxS, cyS, outerR, innerR, color) {
+      const spikes = 5;
+      let rot = Math.PI / 2 * 3;
+      ctx.beginPath();
+      ctx.moveTo(cxS, cyS - outerR);
+      for (let i = 0; i < spikes; i++) {
+        ctx.lineTo(cxS + Math.cos(rot) * outerR, cyS + Math.sin(rot) * outerR);
+        rot += Math.PI / spikes;
+        ctx.lineTo(cxS + Math.cos(rot) * innerR, cyS + Math.sin(rot) * innerR);
+        rot += Math.PI / spikes;
+      }
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    // Texto curvado
+    function drawSegmentTextCurved(text, startAngle, endAngle, rad) {
+        if (!text) return;
+        ctx.save();
+        ctx.fillStyle = '#3a1f00'; 
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        
+        // Calcular fuente dinámica
+        const arcLength = rad * (endAngle - startAngle);
+        let fontSize = Math.floor((arcLength * 0.8) / text.length * 1.4);
         fontSize = Math.min(fontSize, 22);
         fontSize = Math.max(fontSize, 12);
-    }
-    ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
+        ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
 
-    const totalTextWidth = ctx.measureText(text).width;
-    const totalTextAngle = totalTextWidth / radius;
-    let currentAngle = (startAngle + (endAngle - startAngle) / 2) - (totalTextAngle / 2);
+        const totalTextWidth = ctx.measureText(text).width;
+        const totalTextAngle = totalTextWidth / rad;
+        let currentAngle = (startAngle + (endAngle - startAngle) / 2) - (totalTextAngle / 2);
 
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const charWidth = ctx.measureText(char).width;
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(currentAngle + (charWidth / radius) / 2);
-        ctx.translate(radius, 0);
-        ctx.rotate(Math.PI / 2); 
-        ctx.fillText(char, 0, 0);
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            const charWidth = ctx.measureText(char).width;
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(currentAngle + (charWidth / rad) / 2);
+            ctx.translate(rad, 0);
+            ctx.rotate(Math.PI / 2); 
+            ctx.fillText(char, 0, 0);
+            ctx.restore();
+            currentAngle += charWidth / rad;
+        }
         ctx.restore();
-        currentAngle += charWidth / radius;
     }
-    ctx.restore();
-  }
 
-  function drawEmojiCentered(ctx, emoji, startAngle, endAngle, radius, fontSize) {
-    if (!emoji) return;
-    ctx.save();
-    ctx.font = `${fontSize}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const midAngle = startAngle + (endAngle - startAngle) / 2;
-    ctx.translate(cx, cy);      
-    ctx.rotate(midAngle);       
-    ctx.translate(radius, 0);   
-    ctx.rotate(Math.PI / 2);    
-    ctx.fillText(emoji, 0, 0);
-    ctx.restore();
-  }
+    // Emoji centrado
+    function drawEmojiCentered(emoji, startAngle, endAngle, rad, fontSize) {
+        if (!emoji) return;
+        ctx.save();
+        ctx.font = `${fontSize}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const midAngle = startAngle + (endAngle - startAngle) / 2;
+        ctx.translate(cx, cy);      
+        ctx.rotate(midAngle);       
+        ctx.translate(rad, 0);   
+        ctx.rotate(Math.PI / 2);    
+        ctx.fillText(emoji, 0, 0);
+        ctx.restore();
+    }
 
-  // --- INICIO PRINCIPAL ---
-  document.addEventListener('DOMContentLoaded', () => {
-    try {
-      const canvas = document.getElementById('wheel-canvas');
-      const rotor = document.getElementById('wheel-rotor');
-      const spinBtn = document.getElementById('spin-btn');
-      const modal = document.getElementById('prize-modal');
-      const prizeText = document.getElementById('prize-text');
-      const prizeTitle = document.getElementById('prize-title') || (modal && modal.querySelector('h2'));
-      const closeModal = document.getElementById('close-modal');
-      const tryAgainBtn = document.getElementById('try-again-btn');
-      const pointer = document.querySelector('.pointer');
+    // --- 3. DIBUJAR LA RULETA COMPLETA ---
+    function drawWheel() {
+      // Limpiar canvas
+      ctx.clearRect(0, 0, size, size);
 
-      if (!canvas || !ctx) { console.error('Error: Canvas no encontrado'); return; }
-      const ctx = canvas.getContext('2d');
+      const len = prizes.length;
+      const segmentAngle = (2 * Math.PI) / len;
 
-      // 1. INICIALIZAR TAMAÑO (Solo una vez)
-      function initSize() {
-        const rect = canvas.getBoundingClientRect();
-        // Forzamos un tamaño base para evitar el error de crecimiento
-        const baseWidth = rect.width || 500;
-        const dpr = window.devicePixelRatio || 1;
+      // --- Borde Dorado ---
+      const rimOuter = radius + 8;
+      const rimInner = radius;
+      const g = ctx.createLinearGradient(0, cy - rimOuter, 0, cy + rimOuter);
+      g.addColorStop(0, '#ffd86b');
+      g.addColorStop(1, '#d99b2a');
+      ctx.beginPath();
+      ctx.arc(cx, cy, rimOuter, 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.fill();
+
+      // Fondo del borde interior
+      ctx.beginPath();
+      ctx.arc(cx, cy, rimInner, 0, Math.PI * 2);
+      ctx.fillStyle = '#d99b2a';
+      ctx.fill();
+
+      // --- Segmentos ---
+      const segOuter = radius - 2;
+      for (let i = 0; i < len; i++) {
+        const start = -Math.PI / 2 + i * segmentAngle;
+        const end = start + segmentAngle;
         
-        canvas.width = baseWidth * dpr;
-        canvas.height = baseWidth * dpr;
-        canvas.style.width = baseWidth + 'px';
-        canvas.style.height = baseWidth + 'px';
-        
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        
-        // Actualizar variables globales
-        size = baseWidth;
-        cx = size / 2;
-        cy = size / 2;
-        radius = (size / 2) - 10;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, segOuter, start, end);
+        ctx.closePath();
+
+        const fillColor = orangeTones[i % orangeTones.length];
+        const segG = ctx.createLinearGradient(
+          cx + Math.cos(start + segmentAngle/2) * segOuter, cy + Math.sin(start + segmentAngle/2) * segOuter,
+          cx, cy
+        );
+        segG.addColorStop(0, shade(fillColor, -10));
+        segG.addColorStop(1, shade(fillColor, 10));
+        ctx.fillStyle = segG;
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Texto y Emoji
+        drawSegmentTextCurved(prizes[i], start, end, segOuter - 25);
+        drawEmojiCentered(emojis[i], start, end, segOuter - 60, 32);
       }
 
-      // Llamamos a initSize al principio y si cambia la ventana
-      initSize();
-      window.addEventListener('resize', () => {
-          if(!isSpinning) { initSize(); drawWheel(); }
-      });
-
-      // 2. FUNCIÓN DE DIBUJO (Sin recalcular tamaños)
-      function drawWheel() {
-        ctx.clearRect(0, 0, size, size);
-        const len = prizes.length;
-        const segmentAngle = (2 * Math.PI) / len;
-
-        // Borde dorado
-        const rimOuter = radius + 8;
-        const rimInner = radius;
-        const g = ctx.createLinearGradient(0, cy - rimOuter, 0, cy + rimOuter);
-        g.addColorStop(0, '#ffd86b');
-        g.addColorStop(1, '#d99b2a');
-        ctx.beginPath();
-        ctx.arc(cx, cy, rimOuter, 0, Math.PI * 2);
-        ctx.fillStyle = g;
-        ctx.fill();
-
-        // Fondo interior del borde
-        ctx.beginPath();
-        ctx.arc(cx, cy, rimInner, 0, Math.PI * 2);
-        ctx.fillStyle = '#d99b2a';
-        ctx.fill();
-
-        const segOuter = radius - 2;
-        const segInner = radius * 0.20;
-
-        // Segmentos
-        for (let i = 0; i < len; i++) {
-          const start = -Math.PI / 2 + i * segmentAngle;
-          const end = start + segmentAngle;
-          
-          ctx.beginPath();
-          ctx.moveTo(cx, cy);
-          ctx.arc(cx, cy, segOuter, start, end);
-          ctx.closePath();
-
-          const fillColor = orangeTones[i % orangeTones.length];
-          const segG = ctx.createLinearGradient(
-            cx + Math.cos(start + segmentAngle/2) * segOuter, cy + Math.sin(start + segmentAngle/2) * segOuter,
-            cx, cy
-          );
-          segG.addColorStop(0, shade(fillColor, -10));
-          segG.addColorStop(1, shade(fillColor, 10));
-          ctx.fillStyle = segG;
-          ctx.fill();
-
-          ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-
-          // Texto y Emoji
-          drawSegmentTextCurved(ctx, prizes[i], start, end, segOuter - 25);
-          drawEmojiCentered(ctx, emojis[i], start, end, segOuter - 60, 32);
-        }
-
-        // --- LUCES PARPADEANTES ---
-        const lights = 12;
-        for (let i = 0; i < lights; i++) {
-          const ang = -Math.PI / 2 + (i / lights) * (Math.PI * 2);
-          const lx = cx + Math.cos(ang) * (rimOuter - 5);
-          const ly = cy + Math.sin(ang) * (rimOuter - 5);
-          
-          // Alternar parpadeo: pares e impares
-          // Si lightsOn es true, prendemos pares. Si false, impares.
-          const isOn = lightsOn ? (i % 2 === 0) : (i % 2 !== 0);
-          
-          if (isOn) drawLight(ctx, lx, ly, 5);
-          else drawDarkLight(ctx, lx, ly, 5);
-        }
-
-        // Centro (Estrella)
-        drawCenterKnob(ctx, cx, cy, segInner * 2.2);
+      // --- LUCES DEL BORDE (PARPADEANTES) ---
+      const lights = 12;
+      for (let i = 0; i < lights; i++) {
+        const ang = -Math.PI / 2 + (i / lights) * (Math.PI * 2);
+        const lx = cx + Math.cos(ang) * (rimOuter - 5);
+        const ly = cy + Math.sin(ang) * (rimOuter - 5);
         
-        // Sombra interna
-        const innerShadow = ctx.createRadialGradient(cx, cy, segOuter * 0.7, cx, cy, segOuter);
-        innerShadow.addColorStop(0, 'rgba(0,0,0,0)');
-        innerShadow.addColorStop(1, 'rgba(0,0,0,0.15)');
-        ctx.beginPath();
-        ctx.arc(cx, cy, segOuter, 0, Math.PI * 2);
-        ctx.fillStyle = innerShadow;
-        ctx.fill();
+        // Alternar encendido: pares vs impares según 'lightsOn'
+        const isOn = lightsOn ? (i % 2 === 0) : (i % 2 !== 0);
+        
+        if (isOn) drawLightOn(lx, ly, 5);
+        else drawLightOff(lx, ly, 5);
       }
 
-      // 3. LÓGICA DE GIRO
-      function spin() {
-        if (isSpinning) return;
-        if (isLockedToday()) { alert('Ya usaste tu intento por hoy.'); return; }
-        
-        isSpinning = true;
-        spinBtn.disabled = true;
+      // --- ESTRELLA CENTRAL (SIEMPRE IGUAL) ---
+      const segInner = radius * 0.20;
+      drawCenterKnob(cx, cy, segInner * 2.2);
+    }
 
-        const extraRotations = 5 + Math.floor(Math.random() * 3);
-        const randomExtraDeg = Math.random() * 360;
-        const stopAt = 360 * extraRotations + randomExtraDeg;
+    // --- 4. LÓGICA DE GIRO ---
+    function spin() {
+      if (isSpinning) return;
+      if (isLockedToday()) { alert('Ya usaste tu intento por hoy.'); return; }
+      
+      isSpinning = true;
+      spinBtn.disabled = true;
 
+      // Calcular giro aleatorio
+      const extraRotations = 5 + Math.floor(Math.random() * 3);
+      const randomExtraDeg = Math.random() * 360;
+      const stopAt = 360 * extraRotations + randomExtraDeg;
+
+      // Aplicar rotación CSS al contenedor (rotor)
+      if (rotor) {
         rotor.style.transition = 'transform 5s cubic-bezier(.14,.99,.38,1)';
         rotor.style.transform = `rotate(${stopAt}deg)`;
-
+        
         const onEnd = () => {
-          rotor.removeEventListener('transitionend', onEnd);
-          finalizeRotation(stopAt);
+           rotor.removeEventListener('transitionend', onEnd);
+           finalizeRotation(stopAt);
         };
         rotor.addEventListener('transitionend', onEnd);
       }
+    }
 
-      function finalizeRotation(stopAt) {
-        const finalDeg = stopAt % 360;
-        rotor.style.transition = 'none';
-        rotor.style.transform = `rotate(${finalDeg}deg)`;
+    function finalizeRotation(stopAt) {
+      const finalDeg = stopAt % 360;
+      if (rotor) {
+          rotor.style.transition = 'none';
+          rotor.style.transform = `rotate(${finalDeg}deg)`;
+      }
 
-        // Calcular premio
-        const segmentDeg = 360 / prizes.length;
-        // Ajuste matemático para el puntero arriba
-        const index = Math.floor(((360 - finalDeg + segmentDeg/2) % 360) / segmentDeg);
-        const prize = prizes[index];
+      // Calcular ganador
+      const segmentDeg = 360 / prizes.length;
+      // Fórmula para corregir que el puntero está arriba (90 grados)
+      const index = Math.floor(((360 - finalDeg + segmentDeg/2) % 360) / segmentDeg);
+      const prize = prizes[index];
 
-        // Confeti y sonido
-        const rect = rotor.getBoundingClientRect();
-        launchConfetti(rect.left + rect.width/2, rect.top);
-        playWinSound();
+      // Animación de victoria
+      if (pointer) {
+         pointer.classList.remove('bounce');
+         void pointer.offsetWidth; 
+         pointer.classList.add('bounce');
+      }
+      
+      const rect = rotor.getBoundingClientRect();
+      launchConfetti(rect.left + rect.width/2, rect.top);
+      playWinSound();
 
-        // Mostrar Modal
-        const isTryAgain = prize.toLowerCase().startsWith('otro intento');
-        
-        if (!isTryAgain) lockForToday();
-        
-        if (prizeTitle) prizeTitle.textContent = isTryAgain ? '¡Sigue intentando!' : '¡Felicidades!';
-        if (prizeText) prizeText.textContent = isTryAgain ? '¡Tienes otra oportunidad!' : prize;
-        
-        if (isTryAgain) {
-             if(tryAgainBtn) { tryAgainBtn.style.display = 'inline-block'; tryAgainBtn.disabled = false; }
-             if(closeModal) closeModal.style.display = 'none';
-             if(tryAgainBtn) tryAgainBtn.onclick = () => {
+      // --- LOGICA DEL MODAL ---
+      const prizeNormalized = String(prize || '').trim().toLowerCase();
+      const isTryAgain = prizeNormalized.startsWith('otro intento');
+
+      if (!isTryAgain) lockForToday();
+
+      // Textos
+      if (prizeTitle) prizeTitle.textContent = isTryAgain ? '¡Sigue intentando!' : '¡Felicidades!';
+      if (prizeText) prizeText.textContent = isTryAgain ? '¡Tienes otra oportunidad!' : prize;
+
+      // Botones
+      if (isTryAgain) {
+          if (tryAgainBtn) {
+             tryAgainBtn.style.display = 'inline-block';
+             tryAgainBtn.disabled = false;
+             tryAgainBtn.onclick = () => {
                  modal.classList.add('hidden');
                  setTimeout(spin, 200);
              };
-        } else {
-             if(tryAgainBtn) tryAgainBtn.style.display = 'none';
-             if(closeModal) { closeModal.style.display = 'inline-block'; closeModal.textContent = 'ACEPTAR'; }
-        }
-
-        modal.classList.remove('hidden');
-        isSpinning = false;
-        // Reactivar boton solo si es otro intento, si no queda bloqueado por isLockedToday
-        if(isTryAgain) spinBtn.disabled = false;
+          }
+          if (closeModal) closeModal.style.display = 'none';
+      } else {
+          if (tryAgainBtn) tryAgainBtn.style.display = 'none';
+          if (closeModal) {
+             closeModal.style.display = 'inline-block';
+             closeModal.textContent = 'ACEPTAR';
+          }
       }
 
-      // Listeners
-      spinBtn.addEventListener('click', spin);
-      closeModal.addEventListener('click', () => modal.classList.add('hidden'));
+      if (modal) modal.classList.remove('hidden');
+      
+      isSpinning = false;
+      // Si salió otro intento, reactivamos el botón principal por si acaso cierra el modal
+      if (isTryAgain && spinBtn) spinBtn.disabled = false;
+    }
 
-      if (spinBtn) spinBtn.disabled = isLockedToday();
+    // --- INICIALIZACIÓN ---
+    
+    // 1. Calcular tamaño inicial
+    updateDimensions();
 
-      // DIBUJAR INICIAL
-      if (document.fonts) document.fonts.ready.then(drawWheel);
-      else setTimeout(drawWheel, 100);
+    // 2. Escuchar cambios de tamaño de ventana (pero no mientras gira)
+    window.addEventListener('resize', updateDimensions);
 
-      // --- PARPADEO DE LUCES (Sin recalcular tamaño) ---
-      setInterval(() => {
-          lightsOn = !lightsOn;
-          drawWheel();
-      }, 500);
+    // 3. Listener del botón
+    if (spinBtn) {
+        spinBtn.addEventListener('click', spin);
+        if (isLockedToday()) spinBtn.disabled = true;
+    }
+    
+    // 4. Listeners del modal
+    if (closeModal) closeModal.addEventListener('click', () => modal.classList.add('hidden'));
 
-    } catch (err) { console.error(err); }
-  });
+    // 5. Iniciar parpadeo de luces (Loop infinito)
+    setInterval(() => {
+        lightsOn = !lightsOn; // Cambiar estado
+        drawWheel();          // Redibujar
+    }, 500); // Cada medio segundo
 
-  // Confeti simple
+    // Carga de fuentes (Re-intento de dibujo si la fuente tarda)
+    if (document.fonts) {
+        document.fonts.ready.then(drawWheel);
+    }
+
+  }); // Fin DOMContentLoaded
+
+  // --- CONFETI SIMPLE ---
   function launchConfetti(x, y) {
       const c = document.createElement('canvas');
       c.style.position='fixed'; c.style.inset='0'; c.style.pointerEvents='none'; c.style.zIndex='9999';
@@ -413,6 +433,7 @@
       step();
   }
 
+  // --- SONIDO ---
   function playWinSound() {
       try {
           const A = new (window.AudioContext || window.webkitAudioContext)();
