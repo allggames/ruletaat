@@ -318,3 +318,59 @@ canvas{
   font-weight: 300;      /* Letra fina */
   font-family: monospace, sans-serif; /* Monospace le da toque técnico/ticket */
 }
+
+
+/* =========================================
+   VISTA DE CELULAR (Responsive)
+   ========================================= */
+@media (max-width: 600px) {
+  
+  :root {
+    /* 1. Achicamos la ruleta para que entre en vertical */
+    /* 340px es un tamaño seguro para casi todos los móviles */
+    --size: 340px; 
+  }
+
+  body {
+    padding: 15px; /* Menos relleno en los bordes */
+    flex-direction: column; /* Asegura que todo fluya verticalmente */
+  }
+
+  /* 2. Título más pequeño para que no se corte */
+  h1 {
+    font-size: 32px; 
+    margin-bottom: 30px; /* Separarlo un poco más de la ruleta */
+  }
+
+  /* 3. Íconos flotantes: Los hacemos más chicos y ocultamos algunos
+     para que no tapen la ruleta en pantallas pequeñas */
+  .floating-icons .float {
+    transform: scale(0.6) !important; /* Reducir tamaño al 60% */
+    opacity: 0.6; /* Un poco más transparentes */
+  }
+  
+  /* Ocultamos los que quedan muy al medio o molestan en móvil */
+  .floating-icons .f2, 
+  .floating-icons .f5, 
+  .floating-icons .f9 {
+    display: none; 
+  }
+
+  /* 4. Botón de Girar más grande (mejor para el dedo) */
+  .spin-btn {
+    padding: 16px 40px;
+    font-size: 18px;
+    margin-top: 20px;
+  }
+
+  /* 5. Ajustes del Cartel (Modal) */
+  .modal-content {
+    width: 90%;       /* Que ocupe casi todo el ancho */
+    max-width: 340px; 
+    padding: 20px;
+  }
+  
+  .modal-content h2 {
+    font-size: 24px;
+  }
+}
