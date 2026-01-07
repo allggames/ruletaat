@@ -14,58 +14,41 @@
 *{box-sizing:border-box}
 html,body{height:100%}
 
-/* --- Fondo estilo "casino" en tonos naranjas --- */
-body{
-  margin:0;
+/* --- Fondo REAL de Casino teñido de naranja --- */
+body {
+  margin: 0;
   font-family: 'Lexend', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:32px;
-  color:#fff;
-  position:relative;
-  overflow:hidden;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  overflow: hidden;
+  color: #fff;
 
-  /* Base vertical con centro iluminado y bordes más oscuros */
-  background-color: var(--bg2);
-  background-image:
-    radial-gradient(1200px 700px at 50% 30%, rgba(255,230,170,0.28), transparent 18%),
-    linear-gradient(180deg, #ffd89b 0%, #ffb26b 40%, #ff7a00 70%, #ff4a00 100%);
+  /* 1. Fondo base (por si no carga la imagen) */
+  background-color: #ff4500; 
+
+  /* 2. CAPAS DE FONDO:
+     - Capa Superior: Un degradado naranja fuerte semitransparente.
+     - Capa Inferior: Tu imagen de las fichas ('fondo-casino.png').
+  */
+  background-image: 
+    linear-gradient(to bottom, rgba(255, 165, 0, 0.8), rgba(200, 50, 0, 0.9)),
+    url('fondo-casino.png');
+
+  /* 3. Ajustes de posición */
   background-size: cover;
-  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
+  
+  /* 4. LA CLAVE: Mezcla el naranja con la imagen para cambiarle el color */
+  background-blend-mode: hard-light; 
 }
 
-/* Sunburst sutil (rayos) */
-body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:0;
-  background: repeating-conic-gradient(
-    from -90deg at 50% 30%,
-    rgba(255,255,255,0.06) 0deg 6deg,
-    rgba(255,255,255,0) 6deg 12deg
-  );
-  mix-blend-mode: overlay;
-  opacity:0.14;
-  filter: blur(6px);
-}
-
-/* Viñeta / brillo central para profundidad */
-body::after{
-  content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:0;
-  background:
-    radial-gradient(circle at 50% 30%, rgba(255,235,180,0.14) 0%, rgba(255,200,120,0.06) 20%, transparent 40%),
-    radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,0.18) 100%);
-  mix-blend-mode: multiply;
-  opacity:1;
-  filter: saturate(1.02);
+/* Eliminamos los efectos anteriores para que se vea limpia la imagen */
+body::before, body::after {
+  display: none;
 }
 
 /* floating emoji decorations */
