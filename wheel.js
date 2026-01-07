@@ -234,6 +234,31 @@
         ctx.restore();
       }
 
+// Función exclusiva para dibujar el emoji centrado y sin romperlo
+      function drawEmojiCentered(emoji, startAngle, endAngle, radius, size) {
+        if (!emoji) return;
+        ctx.save();
+
+        // Usamos fuentes específicas de emoji para que se vea a color en Windows/Mac/Móvil
+        ctx.font = `${size}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // 1. Calcular el ángulo exacto del centro del gajo
+        const angleSpan = endAngle - startAngle;
+        const midAngle = startAngle + angleSpan / 2;
+
+        // 2. Movernos al sitio
+        ctx.translate(cx, cy);      // Ir al centro de la ruleta
+        ctx.rotate(midAngle);       // Girar hacia el gajo
+        ctx.translate(radius, 0);   // Avanzar hacia afuera hasta el radio deseado
+        ctx.rotate(Math.PI / 2);    // Girar 90° para que el emoji "mire" al centro
+
+        // 3. Dibujar el emoji completo de una vez
+        ctx.fillText(emoji, 0, 0);
+
+        ctx.restore();
+      }
       
       // ---- Wheel drawing (keeps previous look) ----
       function drawWheel() {
@@ -307,8 +332,9 @@
           // 2. DIBUJAR EL EMOJI (ABAJO)
           // Radio: Más adentro (ej. -55px).
           // Tamaño: Le pasamos '32' como último parámetro para que el emoji sea grande.
-          const emojiRadius = segOuter - 55; 
-          drawSegmentTextCurved(emojis[i], start, end, emojiRadius, 32);
+        const emojiRadius = segOuter - 55; 
+          // Le pasamos '40' como tamaño para que se vea grande y bonito
+          drawEmojiCentered(emojis[i], start, end, emojiRadius, 40);
         }
 
         // Lights around rim
