@@ -26,6 +26,20 @@
     "💰", // Para 1500 FICHAS
    ];
 
+  let lightsOn = true; // Variable para controlar el parpadeo
+
+  // Función para dibujar la luz "apagada"
+  function drawDarkLight(x, y, r) {
+    ctx.beginPath();
+    ctx.fillStyle = '#995500'; // Color más oscuro
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; // Centro oscuro
+    ctx.arc(x - r / 3, y - r / 3, r / 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   // Palette: tonos de naranja distintos (cada segmento)
   const orangeTones = [
     '#ff8a3d', '#ff7a15', '#ff9f4a', '#ff6a00',
@@ -337,13 +351,19 @@
           drawEmojiCentered(emojis[i], start, end, emojiRadius, 30);
         }
 
-        // Lights around rim
+// Lights around rim
         const lights = 12;
         for (let i = 0; i < lights; i++) {
           const ang = -Math.PI / 2 + (i / lights) * (Math.PI * 2);
           const lx = cx + Math.cos(ang) * (rimOuter - 6);
           const ly = cy + Math.sin(ang) * (rimOuter - 6);
-          drawLight(lx, ly, 6);
+          
+          // CAMBIO: Dibujar luz encendida o apagada según la variable
+          if (lightsOn) {
+            drawLight(lx, ly, 6);
+          } else {
+            drawDarkLight(lx, ly, 6);
+          }
         }
 
         // Center knob
@@ -595,13 +615,19 @@
       function safeDraw() {
         try { drawWheel(); console.info('Wheel inicializada correctamente.'); } catch (e) { console.error('Error en drawWheel', e); }
       }
-
+      
       if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(() => safeDraw()).catch(() => setTimeout(safeDraw, 60));
         setTimeout(() => safeDraw(), 500);
       } else {
         setTimeout(() => safeDraw(), 40);
       }
+
+      // --- NUEVO: Temporizador para el parpadeo de las luces ---
+      setInterval(() => {
+        lightsOn = !lightsOn; // Cambiar estado de encendido/apagado
+        drawWheel(); // Redibujar la ruleta
+      }, 500); // Parpadear cada medio segundo
 
       if (spinBtn) spinBtn.disabled = isLockedToday();
 
