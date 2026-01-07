@@ -76,14 +76,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- CONFIGURACIÓN DE PROBABILIDAD (Suman 100 idealmente) ---
   const prizeWeights = [
-      2,   // 0. PREMIO A ELECCIÓN (2% - Muy difícil)
+      5,   // 0. PREMIO A ELECCIÓN (5% - Difícil)
       1,   // 1. 3000 FICHAS (1% - Casi imposible)
       15,  // 2. PREMIO SORPRESA (15%)
       20,  // 3. 100% BONO DOBLE (20%)
       10,  // 4. 200% BONO DOBLE (10%)
       30,  // 5. OTRO INTENTO (30% - El más común)
       17,  // 6. 150% BONO DOBLE (17%)
-      5    // 7. 1500 FICHAS (5% - Difícil)
+      2    // 7. 1500 FICHAS (2% - Muy difícil)
   ];
   // -----------------------------------------------------------
 
