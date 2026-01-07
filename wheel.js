@@ -1,5 +1,5 @@
 // =========================================
-// LÓGICA DE PANTALLA DE CARGA Y TRIDENTES
+// LÓGICA DE PANTALLA DE CARGA, SONIDO Y TRIDENTES
 // =========================================
 document.addEventListener("DOMContentLoaded", () => {
     const loadingScreen = document.getElementById('loading-screen');
@@ -9,8 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const barContainer = document.querySelector('.loading-bar-container');
     const bgIconContainer = document.querySelector('.loading-bg-icons');
 
-    // 1. PREPARAR SONIDO (Se activará con el clic)
-    const startSound = new Audio('sonido1.mp3');
+    // 1. PREPARAR SONIDO
+    const startSound = new Audio('sonido1.mp3'); 
     startSound.volume = 0.5;
 
     // 2. GENERAR TRIDENTES ALEATORIOS
@@ -41,50 +41,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (progress === 100) {
             clearInterval(interval);
-            
-            // Cuando termina de cargar:
             setTimeout(() => {
-                // Ocultamos la barra y el texto de carga
                 if (barContainer) barContainer.style.display = 'none';
                 if (loadingText) loadingText.style.display = 'none';
                 
-                // Mostramos el botón de ENTRAR
                 if (enterBtn) {
-                    enterBtn.style.display = 'inline-block';
-                    
-                    // Al hacer clic, suena y entra
+                    enterBtn.style.display = 'inline-block'; 
                     enterBtn.addEventListener('click', () => {
-                        startSound.play().catch(e => console.log(e)); // Reproducir sonido
-                        
-                        // Desvanecer pantalla
+                        startSound.play().catch(e => console.log("Audio error:", e));
                         if (loadingScreen) {
                             loadingScreen.classList.add('fade-out');
                             setTimeout(() => loadingScreen.style.display = 'none', 600);
                         }
                     });
+                } else {
+                    // Fallback
+                    if (loadingScreen) loadingScreen.style.display = 'none';
                 }
             }, 500); 
         }
-    }, 80); // Un poco más rápido para no esperar tanto
+    }, 80);
 });
 
 // =========================================
 // LÓGICA DE LA RULETA
 // =========================================
 (function () {
-  // --- CONFIGURACIÓN ---
   const prizes = ["PREMIO A ELECCIÓN", "3000 FICHAS", "PREMIO SORPRESA", "100% BONO DOBLE", "200% BONO DOBLE", "OTRO INTENTO", "150% BONO DOBLE", "1500 FICHAS"];
   const emojis = ["\uD83C\uDF1F", "\uD83D\uDD31", "\uD83C\uDF81", "\u26A1", "\uD83D\uDD25", "\uD83D\uDC40", "\u2728", "\uD83D\uDCB0"];
   const orangeTones = ['#ff8a3d', '#ff7a15', '#ff9f4a', '#ff6a00', '#ffb069', '#ff942a', '#ff7f3c', '#ffab66'];
 
-  // --- VARIABLES GLOBALES ---
   let lightsOn = true;
   let isSpinning = false;
   let size = 0, cx = 0, cy = 0, radius = 0;
 
   // --- CARGAR IMAGEN DEL LOGO CENTRAL ---
   const centerLogoImg = new Image();
-  centerLogoImg.src = 'logo1.png'; 
+  centerLogoImg.src = 'logo1.png';
   let logoLoaded = false;
   centerLogoImg.onload = () => { logoLoaded = true; };
 
@@ -100,7 +93,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function getSavedPrize() { try { return { name: localStorage.getItem(PRIZE_KEY), time: localStorage.getItem(TIME_KEY) }; } catch (e) { return null; } }
   function clearSavedData() { try { localStorage.removeItem(PRIZE_KEY); localStorage.removeItem(TIME_KEY); } catch (e) {} }
   
-  // --- UTILIDADES DE COLOR ---
   function shade(hex, percent) {
     const f = hex.slice(1), t = percent<0?0:255, p = Math.abs(percent)/100;
     const R = parseInt(f.substring(0,2),16), G = parseInt(f.substring(2,4),16), B = parseInt(f.substring(4,6),16);
@@ -123,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // 1. FUNCIÓN DE TAMAÑO
+    // 1. TAMAÑO
     function updateDimensions() {
       if (isSpinning) return;
       const rect = canvas.getBoundingClientRect();
@@ -136,7 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
       drawWheel();
     }
 
-    // 2. FUNCIONES DE DIBUJO
+    // 2. DIBUJO DE LUCES Y TEXTO
     function drawLightOn(x, y, r) {
       const radial = ctx.createRadialGradient(x-r/3, y-r/3, 1, x, y, r);
       radial.addColorStop(0, '#fff'); radial.addColorStop(1, '#f0aa28');
@@ -145,21 +137,16 @@ document.addEventListener("DOMContentLoaded", () => {
     function drawLightOff(x, y, r) {
       ctx.beginPath(); ctx.fillStyle = '#7a2b00'; ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
     }
-
-    // DIBUJAR EL CENTRO CON EL LOGO
     function drawCenterKnob(x, y, r) {
       const g = ctx.createLinearGradient(x-r, y-r, x+r, y+r);
       g.addColorStop(0, '#ffd86b'); g.addColorStop(1, '#d99b2a');
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fillStyle = g; ctx.fill();
       ctx.beginPath(); ctx.arc(x, y, r*0.72, 0, Math.PI*2); ctx.fillStyle = '#fff6d8'; ctx.fill();
-      
       if (logoLoaded) {
           const logoSize = r * 1.2; 
           ctx.drawImage(centerLogoImg, x - logoSize / 2, y - logoSize / 2, logoSize, logoSize);
       }
     }
-
-    // Texto curvado
     function drawSegmentTextCurved(text, startAngle, endAngle, rad) {
         if (!text) return;
         ctx.save(); ctx.fillStyle = '#3a1f00'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
@@ -179,8 +166,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         ctx.restore();
     }
-
-    // Emoji centrado
     function drawEmojiCentered(emoji, startAngle, endAngle, rad) {
         if (!emoji) return;
         const fontSize = Math.floor(radius * 0.15); 
@@ -192,7 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.fillText(emoji, 0, 0); ctx.restore();
     }
 
-    // 3. DIBUJAR RULETA COMPLETA
+    // 3. DIBUJAR RULETA (AQUÍ ESTÁ LA CORRECCIÓN)
     function drawWheel() {
       ctx.clearRect(0, 0, size, size);
       const len = prizes.length; const segmentAngle = (2 * Math.PI) / len;
@@ -205,7 +190,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const segOuter = radius - 2;
       for (let i = 0; i < len; i++) {
-        const start = -Math.PI/2 + i * segmentAngle; const end = start + segmentAngle;
+        // CORRECCIÓN: Restamos (segmentAngle / 2) al inicio para CENTRAR el gajo en el puntero
+        const start = -Math.PI/2 - segmentAngle/2 + i * segmentAngle; 
+        const end = start + segmentAngle;
+        
         ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, segOuter, start, end); ctx.closePath();
         const fillColor = orangeTones[i % orangeTones.length];
         const segG = ctx.createLinearGradient(cx + Math.cos(start+segmentAngle/2)*segOuter, cy + Math.sin(start+segmentAngle/2)*segOuter, cx, cy);
@@ -287,7 +275,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isTryAgain && spinBtn) spinBtn.disabled = false;
     }
 
-    // --- INICIALIZACIÓN ---
     updateDimensions();
     window.addEventListener('resize', updateDimensions);
     
@@ -308,7 +295,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (document.fonts) document.fonts.ready.then(drawWheel);
   });
 
-  // --- EXTRAS ---
   function launchConfetti(x, y) {
       const c = document.createElement('canvas');
       c.style.position='fixed'; c.style.inset='0'; c.style.pointerEvents='none'; c.style.zIndex='9999';
