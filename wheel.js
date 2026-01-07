@@ -35,6 +35,43 @@
   // Variables de dimensiones
   let size = 0, cx = 0, cy = 0, radius = 0;
 
+// =========================================
+// LÓGICA DE PANTALLA DE CARGA (Se ejecuta primero)
+// =========================================
+document.addEventListener("DOMContentLoaded", () => {
+    const loadingScreen = document.getElementById('loading-screen');
+    const barFill = document.getElementById('loading-bar-fill');
+    let progress = 0;
+
+    // Simulamos la carga con un intervalo
+    const interval = setInterval(() => {
+        // Incrementamos el progreso de forma aleatoria para que parezca real
+        progress += Math.random() * 5; 
+        
+        if (progress > 100) progress = 100;
+
+        // Actualizamos el ancho de la barra
+        if (barFill) barFill.style.width = `${progress}%`;
+
+        // Cuando llega al 100%
+        if (progress === 100) {
+            clearInterval(interval);
+            // Esperamos un poquito (500ms) con la barra llena antes de quitar la pantalla
+            setTimeout(() => {
+                if (loadingScreen) {
+                    loadingScreen.classList.add('fade-out'); // Agrega la clase que lo desvanece
+                    // Opcional: removerlo del DOM después de que termine la transición CSS (0.6s)
+                    setTimeout(() => loadingScreen.style.display = 'none', 600);
+                }
+            }, 500);
+        }
+    }, 100); // Se actualiza cada 100 milisegundos
+});
+// =========================================
+// FIN LÓGICA DE CARGA
+// =========================================
+
+  
   // --- UTILIDADES ---
   const LOCK_KEY = 'ruleta_locked_date_v1';
   const PRIZE_KEY = 'ruleta_saved_prize_v1';
