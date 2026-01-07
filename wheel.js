@@ -6,6 +6,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const barFill = document.getElementById('loading-bar-fill');
     const bgIconContainer = document.querySelector('.loading-bg-icons');
 
+    // --- NUEVO: PREPARAR SONIDO DE INICIO ---
+    // Asegúrate de que el archivo se llame 'sonido1.mp3' (o cambia la extensión aquí)
+    const startSound = new Audio('sonido1.mp3');
+    startSound.volume = 0.5; // Volumen al 50% para no asustar
+
     // 1. GENERAR TRIDENTES ALEATORIOS EN EL FONDO
     if (bgIconContainer) {
         bgIconContainer.innerHTML = ''; // Limpiamos por seguridad
@@ -13,14 +18,21 @@ document.addEventListener("DOMContentLoaded", () => {
         for (let i = 0; i < numIcons; i++) {
             const span = document.createElement('span');
             span.textContent = "🔱";
+            
+            // Posición aleatoria
             span.style.left = Math.random() * 100 + '%';
             span.style.top = Math.random() * 100 + '%';
+            
+            // Tamaño aleatorio para profundidad
             const randomSize = 20 + Math.random() * 40; 
             span.style.fontSize = `${randomSize}px`;
+
+            // Animación aleatoria
             const randomDuration = 6 + Math.random() * 6; 
             const randomDelay = Math.random() * 5; 
             span.style.animationDuration = `${randomDuration}s`;
             span.style.animationDelay = `-${randomDelay}s`;
+
             bgIconContainer.appendChild(span);
         }
     }
@@ -34,6 +46,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (progress === 100) {
             clearInterval(interval);
+
+            // --- NUEVO: REPRODUCIR SONIDO AL LLEGAR AL 100% ---
+            // Nota: Algunos navegadores bloquean el audio si el usuario no hizo clic antes.
+            startSound.play().catch(error => console.log("Audio automático bloqueado por el navegador"));
+
             setTimeout(() => {
                 if (loadingScreen) {
                     loadingScreen.classList.add('fade-out');
@@ -58,12 +75,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let isSpinning = false;
   let size = 0, cx = 0, cy = 0, radius = 0;
 
-  // --- NUEVO: CARGAR IMAGEN DEL LOGO CENTRAL ---
+  // --- CARGAR IMAGEN DEL LOGO CENTRAL ---
   const centerLogoImg = new Image();
-  // *** CAMBIO AQUÍ: Se usa logo1.png ***
   centerLogoImg.src = 'logo1.png'; 
   let logoLoaded = false;
-  // Marcamos cuando la imagen ya está lista para dibujarse
   centerLogoImg.onload = () => { logoLoaded = true; };
 
   // --- CLAVES DE MEMORIA Y FECHAS ---
@@ -124,21 +139,15 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.fillStyle = '#7a2b00'; ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
     }
 
-    // --- MODIFICADO: DIBUJAR EL CENTRO CON EL LOGO ---
+    // DIBUJAR EL CENTRO CON EL LOGO
     function drawCenterKnob(x, y, r) {
-      // Base dorada exterior
       const g = ctx.createLinearGradient(x-r, y-r, x+r, y+r);
       g.addColorStop(0, '#ffd86b'); g.addColorStop(1, '#d99b2a');
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fillStyle = g; ctx.fill();
-      
-      // Círculo interior claro
       ctx.beginPath(); ctx.arc(x, y, r*0.72, 0, Math.PI*2); ctx.fillStyle = '#fff6d8'; ctx.fill();
       
-      // DIBUJAR EL LOGO (si ya cargó)
       if (logoLoaded) {
-          // Calculamos el tamaño ideal: un 120% del radio del botón para que llene bien el centro
           const logoSize = r * 1.2; 
-          // Dibujamos la imagen centrada (x - mitad del tamaño, y - mitad del tamaño)
           ctx.drawImage(centerLogoImg, x - logoSize / 2, y - logoSize / 2, logoSize, logoSize);
       }
     }
@@ -182,13 +191,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const len = prizes.length; const segmentAngle = (2 * Math.PI) / len;
       const rimOuter = radius + 8, rimInner = radius;
       
-      // Borde
       const g = ctx.createLinearGradient(0, cy - rimOuter, 0, cy + rimOuter);
       g.addColorStop(0, '#ffd86b'); g.addColorStop(1, '#d99b2a');
       ctx.beginPath(); ctx.arc(cx, cy, rimOuter, 0, Math.PI*2); ctx.fillStyle = g; ctx.fill();
       ctx.beginPath(); ctx.arc(cx, cy, rimInner, 0, Math.PI*2); ctx.fillStyle = '#d99b2a'; ctx.fill();
 
-      // Segmentos
       const segOuter = radius - 2;
       for (let i = 0; i < len; i++) {
         const start = -Math.PI/2 + i * segmentAngle; const end = start + segmentAngle;
@@ -201,14 +208,12 @@ document.addEventListener("DOMContentLoaded", () => {
         drawSegmentTextCurved(prizes[i], start, end, segOuter * 0.85);
         drawEmojiCentered(emojis[i], start, end, segOuter * 0.65);
       }
-      // Luces
       const lights = 12;
       for (let i = 0; i < lights; i++) {
         const ang = -Math.PI/2 + (i/lights)*Math.PI*2;
         const lx = cx + Math.cos(ang)*(rimOuter-5), ly = cy + Math.sin(ang)*(rimOuter-5);
         if (lightsOn ? (i%2===0) : (i%2!==0)) drawLightOn(lx, ly, 5); else drawLightOff(lx, ly, 5);
       }
-      // Centro (Ahora con Logo)
       drawCenterKnob(cx, cy, radius * 0.20 * 2.2);
     }
 
