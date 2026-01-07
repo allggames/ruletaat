@@ -13,8 +13,6 @@
   ];
 
   // 2. Lista de Emojis (Círculo interior - "Abajo")
-  // El primero lo dejé vacío porque no pusiste uno en tu lista, 
-  // pero puedes poner "⭐" o lo que gustes entre las comillas.
   const emojis = [
     "🌟", // Para PREMIO A ELECCIÓN
     "🔱", // Para 3000 FICHAS
@@ -24,14 +22,16 @@
     "👀", // Para OTRO INTENTO
     "✨", // Para 150% BONO DOBLE
     "💰", // Para 1500 FICHAS
-   ];
+  ];
 
-  let lightsOn = true; // Variable para controlar el parpadeo
+  // Variables de control
+  let lightsOn = true; 
+  let isSpinning = false; // Variable global para saber si gira
 
   // Función para dibujar la luz "apagada"
   function drawDarkLight(x, y, r) {
     ctx.beginPath();
-    ctx.fillStyle = '#995500'; // Color más oscuro
+    ctx.fillStyle = '#995500'; // Color más oscuro (apagado)
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
@@ -88,14 +88,20 @@
       let cy = size / 2;
       let radius = size / 2 - 8;
 
+      // --- CORRECCIÓN IMPORTANTE: No actualizar tamaño si está girando ---
       function updateSizes() {
+        if (isSpinning) return; // SI ESTÁ GIRANDO, NO HACEMOS NADA (Evita que se agrande)
+        
         const rect = canvas.getBoundingClientRect();
-        cssSize = rect.width || cssSize;
-        adaptCanvasForDPR();
-        size = Math.min(canvas.width, canvas.height) / (window.devicePixelRatio || 1);
-        cx = size / 2;
-        cy = size / 2;
-        radius = size / 2 - 8;
+        // Solo actualizamos si realmente cambió el tamaño de la ventana
+        if (rect.width !== cssSize) {
+            cssSize = rect.width || cssSize;
+            adaptCanvasForDPR();
+            size = Math.min(canvas.width, canvas.height) / (window.devicePixelRatio || 1);
+            cx = size / 2;
+            cy = size / 2;
+            radius = size / 2 - 8;
+        }
       }
 
       // small utility: shade color (hex) by percent (-100..100)
@@ -112,7 +118,7 @@
         return `rgb(${newR},${newG},${newB})`;
       }
 
-      // Draw light decoration
+      // Draw light decoration (Encendida)
       function drawLight(x, y, r) {
         const radial = ctx.createRadialGradient(x - r / 3, y - r / 3, 1, x, y, r);
         radial.addColorStop(0, 'rgba(255,255,255,0.95)');
@@ -179,7 +185,6 @@
             cur = test;
           } else {
             if (cur) lines.push(cur);
-            // if the single word is too wide, break by characters
             if (ctxRef.measureText(w).width > maxWidth) {
               let part = '';
               for (const ch of w) {
@@ -196,85 +201,64 @@
         return lines;
       }
 
-  function drawSegmentTextCurved(text, startAngle, endAngle, radius, fixedFontSize = null) {
+      function drawSegmentTextCurved(text, startAngle, endAngle, radius, fixedFontSize = null) {
         if (!text) return;
         ctx.save();
-
-        ctx.fillStyle = '#3a1f00'; // Color del texto
+        ctx.fillStyle = '#3a1f00'; 
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'center';
 
-        // --- CÁLCULO DE TAMAÑO DE FUENTE ---
         let fontSize;
         if (fixedFontSize) {
-            // Si le pasamos un tamaño fijo (para los emojis), usamos ese
             fontSize = fixedFontSize;
         } else {
-            // Si no, calculamos dinámicamente (para el texto largo)
             const angleSpan = endAngle - startAngle;
             const arcLength = radius * angleSpan;
             fontSize = Math.floor((arcLength * 0.8) / text.length * 1.4);
-            fontSize = Math.min(fontSize, 22); // Maximo para texto
-            fontSize = Math.max(fontSize, 12); // Minimo para texto
+            fontSize = Math.min(fontSize, 22);
+            fontSize = Math.max(fontSize, 12);
         }
 
         ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
 
-        // --- CÁLCULOS DE POSICIÓN ---
         const totalTextWidth = ctx.measureText(text).width;
         const totalTextAngle = totalTextWidth / radius;
         let currentAngle = (startAngle + (endAngle - startAngle) / 2) - (totalTextAngle / 2);
 
-        // --- DIBUJO LETRA POR LETRA ---
         for (let i = 0; i < text.length; i++) {
             const char = text[i];
             const charWidth = ctx.measureText(char).width;
-            
-            // Ajuste fino: para emojis, a veces el charWidth engaña al navegador.
-            // Si es un emoji (fixedFontSize activo), centramos mejor.
             const charCenterAngle = currentAngle + (charWidth / radius) / 2;
-
             ctx.save();
             ctx.translate(cx, cy);
             ctx.rotate(charCenterAngle);
             ctx.translate(radius, 0);
-            ctx.rotate(Math.PI / 2); // Rotar para que la base apunte al centro
+            ctx.rotate(Math.PI / 2); 
             ctx.fillText(char, 0, 0);
             ctx.restore();
-
             currentAngle += charWidth / radius;
         }
-
         ctx.restore();
       }
 
-// Función exclusiva para dibujar el emoji centrado y sin romperlo
+      // Función exclusiva para dibujar el emoji centrado
       function drawEmojiCentered(emoji, startAngle, endAngle, radius, size) {
         if (!emoji) return;
         ctx.save();
-
-        // Usamos fuentes específicas de emoji para que se vea a color en Windows/Mac/Móvil
         ctx.font = `${size}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-
-        // 1. Calcular el ángulo exacto del centro del gajo
         const angleSpan = endAngle - startAngle;
         const midAngle = startAngle + angleSpan / 2;
-
-        // 2. Movernos al sitio
-        ctx.translate(cx, cy);      // Ir al centro de la ruleta
-        ctx.rotate(midAngle);       // Girar hacia el gajo
-        ctx.translate(radius, 0);   // Avanzar hacia afuera hasta el radio deseado
-        ctx.rotate(Math.PI / 2);    // Girar 90° para que el emoji "mire" al centro
-
-        // 3. Dibujar el emoji completo de una vez
+        ctx.translate(cx, cy);      
+        ctx.rotate(midAngle);       
+        ctx.translate(radius, 0);   
+        ctx.rotate(Math.PI / 2);    
         ctx.fillText(emoji, 0, 0);
-
         ctx.restore();
       }
       
-      // ---- Wheel drawing (keeps previous look) ----
+      // ---- Wheel drawing ----
       function drawWheel() {
         updateSizes();
         ctx.clearRect(0, 0, size, size);
@@ -306,7 +290,7 @@
 
         // Segments
         const segOuter = radius;
-        const segInner = radius * 0.20; // dejar espacio central para el knob (mejor legibilidad)
+        const segInner = radius * 0.20; 
         for (let i = 0; i < len; i++) {
           const start = -Math.PI / 2 + i * segmentAngle;
           const end = start + segmentAngle;
@@ -336,29 +320,23 @@
           ctx.lineWidth = 2;
           ctx.stroke();
 
-          /// ... código anterior (separadores, stroke, etc) ...
-
           // 1. DIBUJAR EL TEXTO (ARRIBA)
-          // Radio: Un poco menos que el borde (ej. -25px)
           const textRadius = segOuter - 25;
           drawSegmentTextCurved(prizes[i], start, end, textRadius);
 
           // 2. DIBUJAR EL EMOJI (ABAJO)
-          // Radio: Más adentro (ej. -55px).
-          // Tamaño: Le pasamos '32' como último parámetro para que el emoji sea grande.
-        const emojiRadius = segOuter - 55; 
-          // Le pasamos '40' como tamaño para que se vea grande y bonito
+          const emojiRadius = segOuter - 55; 
           drawEmojiCentered(emojis[i], start, end, emojiRadius, 30);
         }
 
-// Lights around rim
+        // Lights around rim
         const lights = 12;
         for (let i = 0; i < lights; i++) {
           const ang = -Math.PI / 2 + (i / lights) * (Math.PI * 2);
           const lx = cx + Math.cos(ang) * (rimOuter - 6);
           const ly = cy + Math.sin(ang) * (rimOuter - 6);
           
-          // CAMBIO: Dibujar luz encendida o apagada según la variable
+          // DIBUJAR LUZ PARPADEANDO
           if (lightsOn) {
             drawLight(lx, ly, 6);
           } else {
@@ -366,7 +344,7 @@
           }
         }
 
-        // Center knob
+        // Center knob (LA ESTRELLA SE DIBUJA SIEMPRE IGUAL)
         drawCenterKnob(cx, cy, segInner * 2.2);
 
         // inner shadow
@@ -472,7 +450,6 @@
       }
 
       // Spin logic
-      let isSpinning = false;
       function spin() {
         if (isSpinning) return;
         if (isLockedToday()) {
@@ -528,12 +505,10 @@
           playWinSound();
         }, 180);
 
-// ... (código anterior donde calculas el winnerIndex y el premio) ...
-
         const prizeNormalized = String(prize || '').trim().toLowerCase();
         const allowTryAgain = prizeNormalized.startsWith('otro intento');
 
-        // LÓGICA DE BLOQUEO (Solo bloqueamos si NO es otro intento)
+        // LÓGICA DE BLOQUEO
         if (!allowTryAgain) {
           lockForToday();
           if (spinBtn) spinBtn.disabled = true;
@@ -541,22 +516,16 @@
           if (spinBtn) spinBtn.disabled = false;
         }
 
-        // --- AQUÍ EMPIEZA EL CAMBIO DE LOS BOTONES ---
-
         // 1. Configurar Título y Texto del premio
         if (prizeTitle) {
           prizeTitle.textContent = allowTryAgain ? '¡Sigue intentando!' : '¡Felicidades!';
         }
         if (prizeText) {
-          // Si es otro intento, no mostramos texto abajo, si es premio, mostramos cuál es
           prizeText.textContent = allowTryAgain ? '¡Tienes otra oportunidad!' : prize;
         }
 
-        // 2. Controlar la visibilidad de los botones
+        // 2. Controlar botones
         if (allowTryAgain) {
-          // --- CASO: SALIÓ "OTRO INTENTO" ---
-          
-          // Mostrar botón de "Otra vuelta"
           if (tryAgainBtn) {
             tryAgainBtn.style.display = 'inline-block'; 
             tryAgainBtn.disabled = false;
@@ -566,31 +535,22 @@
               setTimeout(() => { spin(); }, 120);
             };
           }
-
-          // Ocultar botón de "Aceptar/Cerrar" (para obligar a girar de nuevo)
           if (closeModal) {
             closeModal.style.display = 'none'; 
           }
-
         } else {
-          // --- CASO: SALIÓ UN PREMIO (DINERO, BONO, ETC) ---
-
-          // Ocultar botón de "Otra vuelta" (ya no sirve)
           if (tryAgainBtn) {
             tryAgainBtn.style.display = 'none';
           }
-
-          // Mostrar botón de "ACEPTAR"
           if (closeModal) {
             closeModal.style.display = 'inline-block';
-            closeModal.textContent = 'ACEPTAR'; // <--- Aquí cambiamos el texto
+            closeModal.textContent = 'ACEPTAR';
           }
         }
 
-        // Mostrar el modal
         if (modal) modal.classList.remove('hidden');
         isSpinning = false;
-      }
+      } // Fin finalizeRotation
 
       // UI listeners
       if (spinBtn) spinBtn.addEventListener('click', spin);
@@ -611,7 +571,6 @@
         try { updateSizes(); drawWheel(); } catch (e) { console.error(e); }
       });
 
-      // Wait for font to be ready, then draw
       function safeDraw() {
         try { drawWheel(); console.info('Wheel inicializada correctamente.'); } catch (e) { console.error('Error en drawWheel', e); }
       }
@@ -623,11 +582,11 @@
         setTimeout(() => safeDraw(), 40);
       }
 
-      // --- NUEVO: Temporizador para el parpadeo de las luces ---
+      // Parpadeo de luces
       setInterval(() => {
-        lightsOn = !lightsOn; // Cambiar estado de encendido/apagado
-        drawWheel(); // Redibujar la ruleta
-      }, 500); // Parpadear cada medio segundo
+        lightsOn = !lightsOn; 
+        drawWheel(); 
+      }, 500); 
 
       if (spinBtn) spinBtn.disabled = isLockedToday();
 
