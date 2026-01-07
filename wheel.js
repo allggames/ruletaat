@@ -144,16 +144,25 @@
         ctx.restore();
     }
 
-    function drawEmojiCentered(emoji, startAngle, endAngle, rad) {
+function drawEmojiCentered(emoji, startAngle, endAngle, rad) {
         if (!emoji) return;
-        // El tamaño del emoji ahora es dinámico: 15% del radio de la rueda
+        // Calculamos tamaño (15% del radio)
         const fontSize = Math.floor(radius * 0.15); 
         ctx.save();
-        ctx.font = `${fontSize}px "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        
+        // CAMBIO CLAVE: Usamos solo 'sans-serif'. 
+        // iOS y Android detectarán automáticamente sus emojis nativos.
+        ctx.font = `${fontSize}px sans-serif`; 
+        
+        ctx.textAlign = 'center'; 
+        ctx.textBaseline = 'middle';
         const midAngle = startAngle + (endAngle - startAngle) / 2;
-        ctx.translate(cx, cy); ctx.rotate(midAngle); ctx.translate(rad, 0); ctx.rotate(Math.PI / 2);
-        ctx.fillText(emoji, 0, 0); ctx.restore();
+        ctx.translate(cx, cy);      
+        ctx.rotate(midAngle);       
+        ctx.translate(rad, 0);   
+        ctx.rotate(Math.PI / 2);    
+        ctx.fillText(emoji, 0, 0);
+        ctx.restore();
     }
 
     function drawWheel() {
