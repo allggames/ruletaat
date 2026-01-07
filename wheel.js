@@ -508,9 +508,12 @@
           playWinSound();
         }, 180);
 
+// ... (código anterior donde calculas el winnerIndex y el premio) ...
+
         const prizeNormalized = String(prize || '').trim().toLowerCase();
         const allowTryAgain = prizeNormalized.startsWith('otro intento');
 
+        // LÓGICA DE BLOQUEO (Solo bloqueamos si NO es otro intento)
         if (!allowTryAgain) {
           lockForToday();
           if (spinBtn) spinBtn.disabled = true;
@@ -518,32 +521,55 @@
           if (spinBtn) spinBtn.disabled = false;
         }
 
+        // --- AQUÍ EMPIEZA EL CAMBIO DE LOS BOTONES ---
+
+        // 1. Configurar Título y Texto del premio
         if (prizeTitle) {
-          prizeTitle.textContent = allowTryAgain ? 'Volvamos a intentar' : '¡Felicidades!';
+          prizeTitle.textContent = allowTryAgain ? '¡Sigue intentando!' : '¡Felicidades!';
         }
         if (prizeText) {
-          prizeText.textContent = allowTryAgain ? '' : prize;
+          // Si es otro intento, no mostramos texto abajo, si es premio, mostramos cuál es
+          prizeText.textContent = allowTryAgain ? '¡Tienes otra oportunidad!' : prize;
         }
-        if (tryAgainBtn) {
-          if (allowTryAgain) {
+
+        // 2. Controlar la visibilidad de los botones
+        if (allowTryAgain) {
+          // --- CASO: SALIÓ "OTRO INTENTO" ---
+          
+          // Mostrar botón de "Otra vuelta"
+          if (tryAgainBtn) {
+            tryAgainBtn.style.display = 'inline-block'; 
             tryAgainBtn.disabled = false;
             tryAgainBtn.textContent = 'Otra vuelta';
-            tryAgainBtn.title = 'Haz otra vuelta ahora';
             tryAgainBtn.onclick = function () {
               if (modal) modal.classList.add('hidden');
               setTimeout(() => { spin(); }, 120);
             };
-          } else {
-            tryAgainBtn.disabled = true;
-            tryAgainBtn.textContent = 'Otro intento';
-            tryAgainBtn.title = 'No disponible para este premio';
-            tryAgainBtn.onclick = null;
+          }
+
+          // Ocultar botón de "Aceptar/Cerrar" (para obligar a girar de nuevo)
+          if (closeModal) {
+            closeModal.style.display = 'none'; 
+          }
+
+        } else {
+          // --- CASO: SALIÓ UN PREMIO (DINERO, BONO, ETC) ---
+
+          // Ocultar botón de "Otra vuelta" (ya no sirve)
+          if (tryAgainBtn) {
+            tryAgainBtn.style.display = 'none';
+          }
+
+          // Mostrar botón de "ACEPTAR"
+          if (closeModal) {
+            closeModal.style.display = 'inline-block';
+            closeModal.textContent = 'ACEPTAR'; // <--- Aquí cambiamos el texto
           }
         }
 
+        // Mostrar el modal
         if (modal) modal.classList.remove('hidden');
         isSpinning = false;
-      }
 
       // UI listeners
       if (spinBtn) spinBtn.addEventListener('click', spin);
