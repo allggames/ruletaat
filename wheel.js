@@ -4,40 +4,35 @@
 document.addEventListener("DOMContentLoaded", () => {
     const loadingScreen = document.getElementById('loading-screen');
     const barFill = document.getElementById('loading-bar-fill');
+    const loadingText = document.getElementById('loading-text');
+    const enterBtn = document.getElementById('enter-btn');
+    const barContainer = document.querySelector('.loading-bar-container');
     const bgIconContainer = document.querySelector('.loading-bg-icons');
 
-    // --- NUEVO: PREPARAR SONIDO DE INICIO ---
-    // Asegúrate de que el archivo se llame 'sonido1.mp3' (o cambia la extensión aquí)
+    // 1. PREPARAR SONIDO (Se activará con el clic)
     const startSound = new Audio('sonido1.mp3');
-    startSound.volume = 0.5; // Volumen al 50% para no asustar
+    startSound.volume = 0.5;
 
-    // 1. GENERAR TRIDENTES ALEATORIOS EN EL FONDO
+    // 2. GENERAR TRIDENTES ALEATORIOS
     if (bgIconContainer) {
-        bgIconContainer.innerHTML = ''; // Limpiamos por seguridad
+        bgIconContainer.innerHTML = ''; 
         const numIcons = 40; 
         for (let i = 0; i < numIcons; i++) {
             const span = document.createElement('span');
             span.textContent = "🔱";
-            
-            // Posición aleatoria
             span.style.left = Math.random() * 100 + '%';
             span.style.top = Math.random() * 100 + '%';
-            
-            // Tamaño aleatorio para profundidad
             const randomSize = 20 + Math.random() * 40; 
             span.style.fontSize = `${randomSize}px`;
-
-            // Animación aleatoria
             const randomDuration = 6 + Math.random() * 6; 
             const randomDelay = Math.random() * 5; 
             span.style.animationDuration = `${randomDuration}s`;
             span.style.animationDelay = `-${randomDelay}s`;
-
             bgIconContainer.appendChild(span);
         }
     }
 
-    // 2. BARRA DE CARGA
+    // 3. BARRA DE CARGA
     let progress = 0;
     const interval = setInterval(() => {
         progress += Math.random() * 4; 
@@ -46,19 +41,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (progress === 100) {
             clearInterval(interval);
-
-            // --- NUEVO: REPRODUCIR SONIDO AL LLEGAR AL 100% ---
-            // Nota: Algunos navegadores bloquean el audio si el usuario no hizo clic antes.
-            startSound.play().catch(error => console.log("Audio automático bloqueado por el navegador"));
-
+            
+            // Cuando termina de cargar:
             setTimeout(() => {
-                if (loadingScreen) {
-                    loadingScreen.classList.add('fade-out');
-                    setTimeout(() => loadingScreen.style.display = 'none', 600);
+                // Ocultamos la barra y el texto de carga
+                if (barContainer) barContainer.style.display = 'none';
+                if (loadingText) loadingText.style.display = 'none';
+                
+                // Mostramos el botón de ENTRAR
+                if (enterBtn) {
+                    enterBtn.style.display = 'inline-block';
+                    
+                    // Al hacer clic, suena y entra
+                    enterBtn.addEventListener('click', () => {
+                        startSound.play().catch(e => console.log(e)); // Reproducir sonido
+                        
+                        // Desvanecer pantalla
+                        if (loadingScreen) {
+                            loadingScreen.classList.add('fade-out');
+                            setTimeout(() => loadingScreen.style.display = 'none', 600);
+                        }
+                    });
                 }
             }, 500); 
         }
-    }, 100);
+    }, 80); // Un poco más rápido para no esperar tanto
 });
 
 // =========================================
