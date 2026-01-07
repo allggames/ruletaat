@@ -8,6 +8,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 1. GENERAR TRIDENTES ALEATORIOS EN EL FONDO
     if (bgIconContainer) {
+        // Limpiamos por si acaso
+        bgIconContainer.innerHTML = '';
+        
         const numIcons = 40; // Cantidad de tridentes
         for (let i = 0; i < numIcons; i++) {
             const span = document.createElement('span');
@@ -62,15 +65,46 @@ document.addEventListener("DOMContentLoaded", () => {
   let isSpinning = false;
   let size = 0, cx = 0, cy = 0, radius = 0;
 
+  // CLAVES DE MEMORIA
   const LOCK_KEY = 'ruleta_locked_date_v1';
   const PRIZE_KEY = 'ruleta_saved_prize_v1';
   const TIME_KEY = 'ruleta_saved_time_v1';
 
-  function todayKey() { return new Date().toISOString().slice(0, 10); }
-  function lockForToday() { try { localStorage.setItem(LOCK_KEY, todayKey()); } catch (e) { } }
-  function isLockedToday() { try { return localStorage.getItem(LOCK_KEY) === todayKey(); } catch (e) { return false } }
-  function savePrizeDetails(p, t) { try { localStorage.setItem(PRIZE_KEY, p); localStorage.setItem(TIME_KEY, t); } catch (e) {} }
-  function getSavedPrize() { try { return { name: localStorage.getItem(PRIZE_KEY), time: localStorage.getItem(TIME_KEY) }; } catch (e) { return null; } }
+  // --- LÓGICA DE FECHAS (BLOQUEO DIARIO) ---
+  
+  // Obtiene la fecha local en formato YYYY-MM-DD (ej: "2024-10-25")
+  // Usamos 'en-CA' porque devuelve formato ISO (Año-Mes-Dia) usando la hora local del usuario
+  function todayKey() { 
+      return new Date().toLocaleDateString('en-CA'); 
+  }
+
+  // Guarda la fecha de HOY como bloqueada
+  function lockForToday() { 
+      try { localStorage.setItem(LOCK_KEY, todayKey()); } catch (e) { } 
+  }
+
+  // Verifica si la fecha guardada es IGUAL a la de hoy
+  function isLockedToday() { 
+      try { 
+          const lastDate = localStorage.getItem(LOCK_KEY);
+          return lastDate === todayKey(); 
+      } catch (e) { return false } 
+  }
+
+  // Guarda detalles del premio
+  function savePrizeDetails(p, t) { 
+      try { localStorage.setItem(PRIZE_KEY, p); localStorage.setItem(TIME_KEY, t); } catch (e) {} 
+  }
+
+  // Recupera premio guardado
+  function getSavedPrize() { 
+      try { return { name: localStorage.getItem(PRIZE_KEY), time: localStorage.getItem(TIME_KEY) }; } catch (e) { return null; } 
+  }
+
+  // Borra los datos del premio (para cuando es un nuevo día)
+  function clearSavedData() {
+      try { localStorage.removeItem(PRIZE_KEY); localStorage.removeItem(TIME_KEY); } catch (e) {}
+  }
   
   function shade(hex, percent) {
     const f = hex.slice(1), t = percent<0?0:255, p = Math.abs(percent)/100;
@@ -191,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function spin() {
       if (isSpinning) return;
-      if (isLockedToday()) { alert('Ya usaste tu intento por hoy.'); return; }
+      if (isLockedToday()) { alert('Ya usaste tu intento por hoy. Vuelve mañana.'); return; }
       isSpinning = true; spinBtn.disabled = true;
       const stopAt = 360 * (5 + Math.floor(Math.random()*3)) + Math.random() * 360;
       if (rotor) {
@@ -236,6 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
             else { dateEl.style.display = 'block'; dateEl.textContent = timeString; }
         }
 
+        // Si NO es "otro intento", bloqueamos y guardamos para el futuro
         if (!isTryAgain) { lockForToday(); savePrizeDetails(prize, timeString); }
 
         if (isTryAgain) {
@@ -252,14 +287,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     updateDimensions();
     window.addEventListener('resize', updateDimensions);
+    
+    // --- COMPROBACIÓN AL CARGAR LA PÁGINA ---
     if (spinBtn) {
         spinBtn.addEventListener('click', spin);
+        
         if (isLockedToday()) {
+            // SI ES EL MISMO DÍA: Bloqueamos y mostramos premio viejo
             spinBtn.disabled = true;
             const savedData = getSavedPrize();
             if (savedData && savedData.name) showPrizeModal(savedData.name, savedData.time);
+        } else {
+            // SI ES UN DÍA NUEVO: Habilitamos y limpiamos memoria vieja
+            spinBtn.disabled = false;
+            clearSavedData(); // <-- ESTO BORRA EL PREMIO VIEJO PARA EMPEZAR FRESCO
         }
     }
+    
     if (closeModal) closeModal.addEventListener('click', () => modal.classList.add('hidden'));
     setInterval(() => { lightsOn = !lightsOn; drawWheel(); }, 500);
     if (document.fonts) document.fonts.ready.then(drawWheel);
