@@ -167,11 +167,24 @@ canvas{
 }
 .modal.hidden{ display:none }
 
-/* Fondo Naranja Oscuro y Borde Dorado */
 .modal-content {
-  background: linear-gradient(135deg, #d35400, #a04000); 
-  color: #ffffff; 
-  border: 4px solid #ffd700; 
+  /* 1. Definimos DOS fondos: el degradado naranja Y la imagen de textura */
+  /* IMPORTANTE: Cambia 'textura-papel.png' por el nombre real si le pusiste otro */
+  background-image: linear-gradient(135deg, #d35400e6, #a04000e6), url('textura-papel.png');
+
+  /* 2. Decimos cómo se comporta cada fondo */
+  /* El degradado no se repite, la textura sí se repite (para cubrir todo) */
+  background-repeat: no-repeat, repeat;
+  background-size: cover, auto; /* El degradado cubre, la textura tamaño real */
+  background-position: center, center;
+
+  /* 3. LA MAGIA: Mezclamos los fondos */
+  /* 'multiply' hará que la textura blanca se oscurezca con el naranja */
+  background-blend-mode: multiply;
+
+  /* --- El resto de estilos que ya tenías siguen igual --- */
+  color: #ffffff;
+  border: 4px solid #ffd700;
   padding: 30px;
   border-radius: 20px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.5);
