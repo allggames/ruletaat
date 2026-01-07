@@ -39,9 +39,34 @@
 
   // --- UTILIDADES ---
   const LOCK_KEY = 'ruleta_locked_date_v1';
+  const PRIZE_KEY = 'ruleta_saved_prize_v1'; // Nuevo: Guardar nombre del premio
+  const TIME_KEY = 'ruleta_saved_time_v1';   // Nuevo: Guardar hora del premio
+
   function todayKey() { return new Date().toISOString().slice(0, 10); }
+  
+  // Bloquea y guarda fecha
   function lockForToday() { try { localStorage.setItem(LOCK_KEY, todayKey()); } catch (e) { } }
+  
+  // Verifica si está bloqueado hoy
   function isLockedToday() { try { return localStorage.getItem(LOCK_KEY) === todayKey(); } catch (e) { return false } }
+
+  // Guarda los detalles del premio para mostrar al recargar
+  function savePrizeDetails(prizeName, timeString) {
+      try {
+          localStorage.setItem(PRIZE_KEY, prizeName);
+          localStorage.setItem(TIME_KEY, timeString);
+      } catch (e) {}
+  }
+
+  // Recupera los detalles
+  function getSavedPrize() {
+      try {
+          return {
+              name: localStorage.getItem(PRIZE_KEY),
+              time: localStorage.getItem(TIME_KEY)
+          };
+      } catch (e) { return null; }
+  }
   
   function shade(hex, percent) {
     const f = hex.slice(1);
@@ -64,232 +89,132 @@
     const closeModal = document.getElementById('close-modal');
     const tryAgainBtn = document.getElementById('try-again-btn');
     const pointer = document.querySelector('.pointer');
+    const dateEl = document.getElementById('prize-date'); // Referencia al elemento fecha
 
     if (!canvas) { console.error('Error: No se encontró el canvas'); return; }
     const ctx = canvas.getContext('2d');
 
-    // --- 1. FUNCIÓN DE TAMAÑO (SOLO SE LLAMA AL INICIO Y RESIZE) ---
+    // --- 1. FUNCIÓN DE TAMAÑO ---
     function updateDimensions() {
-      // Si está girando, NO recalculamos para evitar deformaciones
       if (isSpinning) return;
-
       const rect = canvas.getBoundingClientRect();
       const cssWidth = rect.width || 500;
       const dpr = window.devicePixelRatio || 1;
-      
-      // Configurar resolución interna del canvas
       canvas.width = cssWidth * dpr;
       canvas.height = cssWidth * dpr;
-      
-      // Configurar tamaño visual (CSS)
       canvas.style.width = cssWidth + 'px';
       canvas.style.height = cssWidth + 'px';
-      
-      // Normalizar sistema de coordenadas
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      // Guardar valores globales
       size = cssWidth;
       cx = size / 2;
       cy = size / 2;
-      radius = (size / 2) - 10; // Margen para luces
-
-      // Redibujar inmediatamente
+      radius = (size / 2) - 10;
       drawWheel();
     }
 
-    // --- 2. FUNCIONES DE DIBUJO AUXILIARES ---
-
-    // Dibuja la luz ENCENDIDA
+    // --- 2. FUNCIONES DE DIBUJO ---
     function drawLightOn(x, y, r) {
       const radial = ctx.createRadialGradient(x - r / 3, y - r / 3, 1, x, y, r);
       radial.addColorStop(0, 'rgba(255,255,255,0.95)');
       radial.addColorStop(0.2, 'rgba(255,245,200,0.98)');
       radial.addColorStop(1, 'rgba(240,170,40,0.9)');
-      ctx.beginPath();
-      ctx.fillStyle = radial;
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.arc(x - r / 3, y - r / 3, r / 2.5, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.fillStyle = radial; ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.arc(x - r / 3, y - r / 3, r / 2.5, 0, Math.PI * 2); ctx.fill();
     }
 
-    // Dibuja la luz APAGADA (Color oscuro)
     function drawLightOff(x, y, r) {
-      ctx.beginPath();
-      ctx.fillStyle = '#7a2b00'; // Marrón oscuro
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.fillStyle = 'rgba(0,0,0,0.3)'; // Sombra interna
-      ctx.arc(x - r / 3, y - r / 3, r / 2.5, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.fillStyle = '#7a2b00'; ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.arc(x - r / 3, y - r / 3, r / 2.5, 0, Math.PI * 2); ctx.fill();
     }
 
-    // Dibuja la estrella central (ESTÁTICA)
     function drawCenterKnob(x, y, r) {
       const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
-      g.addColorStop(0, '#ffd86b');
-      g.addColorStop(0.5, '#f6bf3a');
-      g.addColorStop(1, '#d99b2a');
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fillStyle = g;
-      ctx.fill();
-      
-      // Círculo interior claro
-      ctx.beginPath();
-      ctx.arc(x, y, r * 0.72, 0, Math.PI * 2);
-      ctx.fillStyle = '#fff6d8';
-      ctx.fill();
-      
-      // Estrella
+      g.addColorStop(0, '#ffd86b'); g.addColorStop(0.5, '#f6bf3a'); g.addColorStop(1, '#d99b2a');
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, r * 0.72, 0, Math.PI * 2); ctx.fillStyle = '#fff6d8'; ctx.fill();
       drawStar(x, y, Math.max(6, Math.floor(r * 0.36)), Math.max(3, Math.floor(r * 0.14)), '#ffb84d');
     }
 
     function drawStar(cxS, cyS, outerR, innerR, color) {
       const spikes = 5;
       let rot = Math.PI / 2 * 3;
-      ctx.beginPath();
-      ctx.moveTo(cxS, cyS - outerR);
+      ctx.beginPath(); ctx.moveTo(cxS, cyS - outerR);
       for (let i = 0; i < spikes; i++) {
-        ctx.lineTo(cxS + Math.cos(rot) * outerR, cyS + Math.sin(rot) * outerR);
-        rot += Math.PI / spikes;
-        ctx.lineTo(cxS + Math.cos(rot) * innerR, cyS + Math.sin(rot) * innerR);
-        rot += Math.PI / spikes;
+        ctx.lineTo(cxS + Math.cos(rot) * outerR, cyS + Math.sin(rot) * outerR); rot += Math.PI / spikes;
+        ctx.lineTo(cxS + Math.cos(rot) * innerR, cyS + Math.sin(rot) * innerR); rot += Math.PI / spikes;
       }
-      ctx.closePath();
-      ctx.fillStyle = color;
-      ctx.fill();
+      ctx.closePath(); ctx.fillStyle = color; ctx.fill();
     }
 
-    // Texto curvado
     function drawSegmentTextCurved(text, startAngle, endAngle, rad) {
         if (!text) return;
         ctx.save();
-        ctx.fillStyle = '#3a1f00'; 
-        ctx.textBaseline = 'middle';
-        ctx.textAlign = 'center';
-        
-        // Calcular fuente dinámica
+        ctx.fillStyle = '#3a1f00'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
         const arcLength = rad * (endAngle - startAngle);
         let fontSize = Math.floor((arcLength * 0.8) / text.length * 1.4);
-        fontSize = Math.min(fontSize, 22);
-        fontSize = Math.max(fontSize, 12);
+        fontSize = Math.min(fontSize, 22); fontSize = Math.max(fontSize, 12);
         ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
-
         const totalTextWidth = ctx.measureText(text).width;
         const totalTextAngle = totalTextWidth / rad;
         let currentAngle = (startAngle + (endAngle - startAngle) / 2) - (totalTextAngle / 2);
-
         for (let i = 0; i < text.length; i++) {
-            const char = text[i];
-            const charWidth = ctx.measureText(char).width;
-            ctx.save();
-            ctx.translate(cx, cy);
-            ctx.rotate(currentAngle + (charWidth / rad) / 2);
-            ctx.translate(rad, 0);
-            ctx.rotate(Math.PI / 2); 
-            ctx.fillText(char, 0, 0);
-            ctx.restore();
+            const char = text[i]; const charWidth = ctx.measureText(char).width;
+            ctx.save(); ctx.translate(cx, cy); ctx.rotate(currentAngle + (charWidth / rad) / 2);
+            ctx.translate(rad, 0); ctx.rotate(Math.PI / 2); ctx.fillText(char, 0, 0); ctx.restore();
             currentAngle += charWidth / rad;
         }
         ctx.restore();
     }
 
-    // Emoji centrado
     function drawEmojiCentered(emoji, startAngle, endAngle, rad, fontSize) {
         if (!emoji) return;
         ctx.save();
         ctx.font = `${fontSize}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         const midAngle = startAngle + (endAngle - startAngle) / 2;
-        ctx.translate(cx, cy);      
-        ctx.rotate(midAngle);       
-        ctx.translate(rad, 0);   
-        ctx.rotate(Math.PI / 2);    
-        ctx.fillText(emoji, 0, 0);
-        ctx.restore();
+        ctx.translate(cx, cy); ctx.rotate(midAngle); ctx.translate(rad, 0); ctx.rotate(Math.PI / 2);
+        ctx.fillText(emoji, 0, 0); ctx.restore();
     }
 
-    // --- 3. DIBUJAR LA RULETA COMPLETA ---
     function drawWheel() {
-      // Limpiar canvas
       ctx.clearRect(0, 0, size, size);
-
       const len = prizes.length;
       const segmentAngle = (2 * Math.PI) / len;
 
-      // --- Borde Dorado ---
       const rimOuter = radius + 8;
       const rimInner = radius;
       const g = ctx.createLinearGradient(0, cy - rimOuter, 0, cy + rimOuter);
-      g.addColorStop(0, '#ffd86b');
-      g.addColorStop(1, '#d99b2a');
-      ctx.beginPath();
-      ctx.arc(cx, cy, rimOuter, 0, Math.PI * 2);
-      ctx.fillStyle = g;
-      ctx.fill();
+      g.addColorStop(0, '#ffd86b'); g.addColorStop(1, '#d99b2a');
+      ctx.beginPath(); ctx.arc(cx, cy, rimOuter, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, rimInner, 0, Math.PI * 2); ctx.fillStyle = '#d99b2a'; ctx.fill();
 
-      // Fondo del borde interior
-      ctx.beginPath();
-      ctx.arc(cx, cy, rimInner, 0, Math.PI * 2);
-      ctx.fillStyle = '#d99b2a';
-      ctx.fill();
-
-      // --- Segmentos ---
       const segOuter = radius - 2;
       for (let i = 0; i < len; i++) {
         const start = -Math.PI / 2 + i * segmentAngle;
         const end = start + segmentAngle;
-        
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, segOuter, start, end);
-        ctx.closePath();
-
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, segOuter, start, end); ctx.closePath();
         const fillColor = orangeTones[i % orangeTones.length];
-        const segG = ctx.createLinearGradient(
-          cx + Math.cos(start + segmentAngle/2) * segOuter, cy + Math.sin(start + segmentAngle/2) * segOuter,
-          cx, cy
-        );
-        segG.addColorStop(0, shade(fillColor, -10));
-        segG.addColorStop(1, shade(fillColor, 10));
-        ctx.fillStyle = segG;
-        ctx.fill();
-
-        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Texto y Emoji
+        const segG = ctx.createLinearGradient(cx + Math.cos(start + segmentAngle/2) * segOuter, cy + Math.sin(start + segmentAngle/2) * segOuter, cx, cy);
+        segG.addColorStop(0, shade(fillColor, -10)); segG.addColorStop(1, shade(fillColor, 10));
+        ctx.fillStyle = segG; ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 2; ctx.stroke();
         drawSegmentTextCurved(prizes[i], start, end, segOuter - 25);
         drawEmojiCentered(emojis[i], start, end, segOuter - 60, 32);
       }
 
-      // --- LUCES DEL BORDE (PARPADEANTES) ---
       const lights = 12;
       for (let i = 0; i < lights; i++) {
         const ang = -Math.PI / 2 + (i / lights) * (Math.PI * 2);
         const lx = cx + Math.cos(ang) * (rimOuter - 5);
         const ly = cy + Math.sin(ang) * (rimOuter - 5);
-        
-        // Alternar encendido: pares vs impares según 'lightsOn'
         const isOn = lightsOn ? (i % 2 === 0) : (i % 2 !== 0);
-        
-        if (isOn) drawLightOn(lx, ly, 5);
-        else drawLightOff(lx, ly, 5);
+        if (isOn) drawLightOn(lx, ly, 5); else drawLightOff(lx, ly, 5);
       }
-
-      // --- ESTRELLA CENTRAL (SIEMPRE IGUAL) ---
       const segInner = radius * 0.20;
       drawCenterKnob(cx, cy, segInner * 2.2);
     }
 
-    // --- 4. LÓGICA DE GIRO ---
+    // --- 3. LÓGICA DE GIRO ---
     function spin() {
       if (isSpinning) return;
       if (isLockedToday()) { alert('Ya usaste tu intento por hoy.'); return; }
@@ -297,20 +222,14 @@
       isSpinning = true;
       spinBtn.disabled = true;
 
-      // Calcular giro aleatorio
       const extraRotations = 5 + Math.floor(Math.random() * 3);
       const randomExtraDeg = Math.random() * 360;
       const stopAt = 360 * extraRotations + randomExtraDeg;
 
-      // Aplicar rotación CSS al contenedor (rotor)
       if (rotor) {
         rotor.style.transition = 'transform 5s cubic-bezier(.14,.99,.38,1)';
         rotor.style.transform = `rotate(${stopAt}deg)`;
-        
-        const onEnd = () => {
-           rotor.removeEventListener('transitionend', onEnd);
-           finalizeRotation(stopAt);
-        };
+        const onEnd = () => { rotor.removeEventListener('transitionend', onEnd); finalizeRotation(stopAt); };
         rotor.addEventListener('transitionend', onEnd);
       }
     }
@@ -322,146 +241,125 @@
           rotor.style.transform = `rotate(${finalDeg}deg)`;
       }
 
-      // Calcular ganador
       const segmentDeg = 360 / prizes.length;
-      // Fórmula para corregir que el puntero está arriba (90 grados)
       const index = Math.floor(((360 - finalDeg + segmentDeg/2) % 360) / segmentDeg);
       const prize = prizes[index];
 
-      // Animación de victoria
       if (pointer) {
-         pointer.classList.remove('bounce');
-         void pointer.offsetWidth; 
-         pointer.classList.add('bounce');
+         pointer.classList.remove('bounce'); void pointer.offsetWidth; pointer.classList.add('bounce');
       }
       
       const rect = rotor.getBoundingClientRect();
       launchConfetti(rect.left + rect.width/2, rect.top);
       playWinSound();
 
-      // --- LOGICA DEL MODAL ---
-      const prizeNormalized = String(prize || '').trim().toLowerCase();
-      const isTryAgain = prizeNormalized.startsWith('otro intento');
+      showPrizeModal(prize);
+    }
 
-      if (!isTryAgain) lockForToday();
+    // --- MOSTRAR MODAL (LÓGICA UNIFICADA) ---
+    function showPrizeModal(prize, savedTime = null) {
+        const prizeNormalized = String(prize || '').trim().toLowerCase();
+        const isTryAgain = prizeNormalized.startsWith('otro intento');
 
-      // Título
-      if (prizeTitle) prizeTitle.textContent = isTryAgain ? '¡Sigue intentando!' : '¡Felicidades!';
-      // Texto
-      if (prizeText) prizeText.textContent = isTryAgain ? '¡Tienes otra oportunidad!' : prize;
+        // Textos
+        if (prizeTitle) prizeTitle.textContent = isTryAgain ? '¡Sigue intentando!' : '¡Felicidades!';
+        if (prizeText) prizeText.textContent = isTryAgain ? '¡Tienes otra oportunidad!' : prize;
 
-      // --- FECHA Y HORA (NUEVO) ---
-      const dateEl = document.getElementById('prize-date');
-      if (dateEl) {
-          if (isTryAgain) {
-              dateEl.style.display = 'none';
-          } else {
-              dateEl.style.display = 'block';
-              const now = new Date();
-              const day = String(now.getDate()).padStart(2, '0');
-              const month = String(now.getMonth() + 1).padStart(2, '0');
-              const year = now.getFullYear();
-              const hours = String(now.getHours()).padStart(2, '0');
-              const minutes = String(now.getMinutes()).padStart(2, '0');
-              dateEl.textContent = `Reclamado: ${day}/${month}/${year}, ${hours}:${minutes}`;
-          }
-      }
+        // Fecha y Hora
+        let timeString = savedTime;
+        if (!timeString && !isTryAgain) {
+            // Si es nuevo premio y no "otro intento", generamos la hora
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            timeString = `Reclamado: ${day}/${month}/${year}, ${hours}:${minutes}`;
+        }
 
-      // --- BOTONES (CORREGIDO) ---
-      if (isTryAgain) {
-          // Caso: Otro intento
-          if (tryAgainBtn) {
-             tryAgainBtn.style.display = 'inline-block';
-             tryAgainBtn.disabled = false;
-             tryAgainBtn.onclick = () => {
-                 modal.classList.add('hidden');
-                 setTimeout(spin, 200);
-             };
-          }
-          if (closeModal) closeModal.style.display = 'none';
-      } else {
-          // Caso: Premio final
-          if (tryAgainBtn) tryAgainBtn.style.display = 'none';
-          if (closeModal) {
-             closeModal.style.display = 'inline-block';
-             closeModal.textContent = 'ACEPTAR';
-          }
-      }
+        if (dateEl) {
+            if (isTryAgain) {
+                dateEl.style.display = 'none';
+            } else {
+                dateEl.style.display = 'block';
+                dateEl.textContent = timeString;
+            }
+        }
 
-      if (modal) modal.classList.remove('hidden');
-      
-      isSpinning = false;
-      // Si salió otro intento, reactivamos el botón principal por si acaso cierra el modal
-      if (isTryAgain && spinBtn) spinBtn.disabled = false;
+        // Bloqueo y Guardado
+        if (!isTryAgain) {
+            lockForToday();
+            // Guardamos premio y hora para recargas futuras
+            savePrizeDetails(prize, timeString);
+        }
+
+        // Botones
+        if (isTryAgain) {
+            if (tryAgainBtn) {
+               tryAgainBtn.style.display = 'inline-block';
+               tryAgainBtn.disabled = false;
+               tryAgainBtn.onclick = () => { modal.classList.add('hidden'); setTimeout(spin, 200); };
+            }
+            if (closeModal) closeModal.style.display = 'none';
+        } else {
+            if (tryAgainBtn) tryAgainBtn.style.display = 'none';
+            if (closeModal) {
+               closeModal.style.display = 'inline-block';
+               closeModal.textContent = 'ACEPTAR';
+            }
+        }
+
+        if (modal) modal.classList.remove('hidden');
+        isSpinning = false;
+        if (isTryAgain && spinBtn) spinBtn.disabled = false;
     }
 
     // --- INICIALIZACIÓN ---
-    
-    // 1. Calcular tamaño inicial
     updateDimensions();
-
-    // 2. Escuchar cambios de tamaño de ventana (pero no mientras gira)
     window.addEventListener('resize', updateDimensions);
 
-    // 3. Listener del botón
     if (spinBtn) {
         spinBtn.addEventListener('click', spin);
-        if (isLockedToday()) spinBtn.disabled = true;
+        
+        // --- NUEVO: COMPROBAR AL CARGAR ---
+        if (isLockedToday()) {
+            spinBtn.disabled = true;
+            
+            // Ver si tenemos un premio guardado para mostrar
+            const savedData = getSavedPrize();
+            if (savedData && savedData.name && savedData.time) {
+                // Si hay datos, mostramos el cartel directamente
+                showPrizeModal(savedData.name, savedData.time);
+            }
+        }
     }
     
-    // 4. Listeners del modal
     if (closeModal) closeModal.addEventListener('click', () => modal.classList.add('hidden'));
 
-    // 5. Iniciar parpadeo de luces (Loop infinito)
-    setInterval(() => {
-        lightsOn = !lightsOn; // Cambiar estado
-        drawWheel();          // Redibujar
-    }, 500); // Cada medio segundo
+    setInterval(() => { lightsOn = !lightsOn; drawWheel(); }, 500);
 
-    // Carga de fuentes (Re-intento de dibujo si la fuente tarda)
-    if (document.fonts) {
-        document.fonts.ready.then(drawWheel);
-    }
+    if (document.fonts) { document.fonts.ready.then(drawWheel); }
 
-  }); // Fin DOMContentLoaded
+  }); 
 
-  // --- CONFETI SIMPLE ---
+  // --- EXTRAS ---
   function launchConfetti(x, y) {
       const c = document.createElement('canvas');
       c.style.position='fixed'; c.style.inset='0'; c.style.pointerEvents='none'; c.style.zIndex='9999';
       document.body.appendChild(c);
       const ctx = c.getContext('2d');
       c.width = window.innerWidth; c.height = window.innerHeight;
-      
       const particles = Array.from({length: 80}, () => ({
-          x: x, y: y,
-          vx: (Math.random()-0.5)*10, vy: (Math.random()-1)*10 - 5,
-          color: `hsl(${Math.random()*360}, 100%, 50%)`,
-          life: 100
+          x: x, y: y, vx: (Math.random()-0.5)*10, vy: (Math.random()-1)*10 - 5,
+          color: `hsl(${Math.random()*360}, 100%, 50%)`, life: 100
       }));
-
       function step() {
           ctx.clearRect(0,0,c.width,c.height);
-          particles.forEach(p => {
-              p.x += p.vx; p.y += p.vy; p.vy += 0.5; p.life--;
-              ctx.fillStyle = p.color;
-              ctx.fillRect(p.x, p.y, 8, 8);
-          });
-          if(particles.some(p => p.life > 0)) requestAnimationFrame(step);
-          else c.remove();
+          particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.5; p.life--; ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 8, 8); });
+          if(particles.some(p => p.life > 0)) requestAnimationFrame(step); else c.remove();
       }
       step();
   }
-
-  // --- SONIDO ---
-  function playWinSound() {
-      try {
-          const A = new (window.AudioContext || window.webkitAudioContext)();
-          const o = A.createOscillator(); o.connect(A.destination);
-          o.type='triangle'; o.frequency.setValueAtTime(600, A.currentTime);
-          o.frequency.exponentialRampToValueAtTime(1000, A.currentTime+0.1);
-          o.start(); o.stop(A.currentTime+0.5);
-      } catch(e){}
-  }
-
+  function playWinSound() { try { const A = new (window.AudioContext || window.webkitAudioContext)(); const o = A.createOscillator(); o.connect(A.destination); o.type='triangle'; o.frequency.setValueAtTime(600, A.currentTime); o.frequency.exponentialRampToValueAtTime(1000, A.currentTime+0.1); o.start(); o.stop(A.currentTime+0.5); } catch(e){} }
 })();
