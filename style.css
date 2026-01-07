@@ -308,3 +308,13 @@ canvas{
   body::before { opacity: 0.08; filter: blur(4px); }
   body::after { opacity: 0.8; }
 }
+
+/* Estilo para la fecha y hora del reclamo */
+.prize-date {
+  font-size: 13px;       /* Letra pequeña */
+  margin-top: 4px;       /* Pegado al premio */
+  margin-bottom: 20px;   /* Separado de los botones */
+  color: rgba(255, 255, 255, 0.85); /* Blanco con un poco de transparencia */
+  font-weight: 300;      /* Letra fina */
+  font-family: monospace, sans-serif; /* Monospace le da toque técnico/ticket */
+}
