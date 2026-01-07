@@ -182,63 +182,59 @@
         return lines;
       }
 
-  // NUEVA FUNCIÓN: Dibuja el texto curvado siguiendo el arco exterior
-      function drawSegmentTextCurved(text, startAngle, endAngle, radius) {
+  function drawSegmentTextCurved(text, startAngle, endAngle, radius, fixedFontSize = null) {
         if (!text) return;
         ctx.save();
 
-        // 1. Configuración de estilo
-        ctx.fillStyle = '#3a1f00'; // Color marrón oscuro (puedes cambiarlo a blanco '#ffffff' si prefieres)
+        ctx.fillStyle = '#3a1f00'; // Color del texto
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'center';
 
-        // 2. Calcular tamaño de fuente dinámico
-        // Estimamos la longitud del arco disponible
-        const angleSpan = endAngle - startAngle;
-        const arcLength = radius * angleSpan;
-        // Cálculo aproximado para que el texto quepa en el 80% del arco
-        // Ajusta el '1.4' si la fuente queda muy grande o pequeña
-        let fontSize = Math.floor((arcLength * 0.8) / text.length * 1.4);
-        fontSize = Math.min(fontSize, 22); // Tamaño máximo
-        fontSize = Math.max(fontSize, 12); // Tamaño mínimo
+        // --- CÁLCULO DE TAMAÑO DE FUENTE ---
+        let fontSize;
+        if (fixedFontSize) {
+            // Si le pasamos un tamaño fijo (para los emojis), usamos ese
+            fontSize = fixedFontSize;
+        } else {
+            // Si no, calculamos dinámicamente (para el texto largo)
+            const angleSpan = endAngle - startAngle;
+            const arcLength = radius * angleSpan;
+            fontSize = Math.floor((arcLength * 0.8) / text.length * 1.4);
+            fontSize = Math.min(fontSize, 22); // Maximo para texto
+            fontSize = Math.max(fontSize, 12); // Minimo para texto
+        }
 
         ctx.font = `700 ${fontSize}px 'Lexend', sans-serif`;
 
-        // 3. Cálculos de posición angular
-        // Medimos el ancho total que ocupará el texto recto
+        // --- CÁLCULOS DE POSICIÓN ---
         const totalTextWidth = ctx.measureText(text).width;
-        // Convertimos ese ancho lineal a un ángulo basado en el radio
         const totalTextAngle = totalTextWidth / radius;
-        // Calculamos el ángulo inicial para que el texto quede centrado en el gajo
-        // (Ángulo medio del gajo) - (Mitad del ángulo del texto)
-        let currentAngle = (startAngle + angleSpan / 2) - (totalTextAngle / 2);
+        let currentAngle = (startAngle + (endAngle - startAngle) / 2) - (totalTextAngle / 2);
 
-        // 4. Dibujar letra por letra
+        // --- DIBUJO LETRA POR LETRA ---
         for (let i = 0; i < text.length; i++) {
             const char = text[i];
             const charWidth = ctx.measureText(char).width;
-            // El ángulo central de esta letra específica
+            
+            // Ajuste fino: para emojis, a veces el charWidth engaña al navegador.
+            // Si es un emoji (fixedFontSize activo), centramos mejor.
             const charCenterAngle = currentAngle + (charWidth / radius) / 2;
 
             ctx.save();
-            // a) Mover el origen al centro de la ruleta
             ctx.translate(cx, cy);
-            // b) Rotar hacia la posición de la letra
             ctx.rotate(charCenterAngle);
-            // c) Moverse hacia afuera hasta el radio deseado
             ctx.translate(radius, 0);
-            // d) Rotar 90 grados (Math.PI/2) para que la base de la letra apunte al centro
-            ctx.rotate(Math.PI / 2);
-            // e) Dibujar la letra en el origen local (0,0)
+            ctx.rotate(Math.PI / 2); // Rotar para que la base apunte al centro
             ctx.fillText(char, 0, 0);
             ctx.restore();
 
-            // Avanzar el ángulo para la siguiente letra
             currentAngle += charWidth / radius;
         }
 
         ctx.restore();
       }
+
+      
       // ---- Wheel drawing (keeps previous look) ----
       function drawWheel() {
         updateSizes();
@@ -301,11 +297,18 @@
           ctx.lineWidth = 2;
           ctx.stroke();
 
-          // Definimos el radio donde se asentará el texto.
-          // segOuter es el borde extremo. Restamos unos 25px para meterlo hacia adentro.
-          // Ajusta este número (25) si quieres el texto más cerca o lejos del borde.
+          /// ... código anterior (separadores, stroke, etc) ...
+
+          // 1. DIBUJAR EL TEXTO (ARRIBA)
+          // Radio: Un poco menos que el borde (ej. -25px)
           const textRadius = segOuter - 25;
           drawSegmentTextCurved(prizes[i], start, end, textRadius);
+
+          // 2. DIBUJAR EL EMOJI (ABAJO)
+          // Radio: Más adentro (ej. -55px).
+          // Tamaño: Le pasamos '32' como último parámetro para que el emoji sea grande.
+          const emojiRadius = segOuter - 55; 
+          drawSegmentTextCurved(emojis[i], start, end, emojiRadius, 32);
         }
 
         // Lights around rim
