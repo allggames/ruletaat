@@ -166,14 +166,32 @@ canvas{
   z-index:999;
 }
 .modal.hidden{ display:none }
-.modal-content{
-  background:#fff;
-  color:#021226;
-  padding:18px 22px;
-  border-radius:12px;
-  text-align:center;
-  min-width:300px;
-  box-shadow:0 14px 40px rgba(2,6,23,0.35);
+/* Busca esta clase .modal-content y actualízala así */
+.modal-content {
+  background: linear-gradient(135deg, #d35400, #a04000); /* Naranja oscuro degradado */
+  color: #ffffff; /* Letras blancas */
+  border: 4px solid #ffd700; /* Un borde dorado para que resalte */
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+}
+
+/* Opcional: Estilo para el botón ACEPTAR (que antes era cerrar) */
+#close-modal {
+  background-color: #ffffff;
+  color: #d35400;
+  border: none;
+  padding: 10px 20px;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 15px;
+}
+#close-modal:hover {
+  background-color: #fff3e0;
 }
 .modal-content h2{ margin-top:0; margin-bottom:6px; font-size:18px; }
 .modal-actions{ display:flex; gap:10px; justify-content:center; margin-top:12px; }
