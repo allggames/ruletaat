@@ -347,7 +347,35 @@
 
       // Textos
       if (prizeTitle) prizeTitle.textContent = isTryAgain ? '¡Sigue intentando!' : '¡Felicidades!';
+     // ... (dentro de finalizeRotation, después de configurar los textos del premio) ...
+
       if (prizeText) prizeText.textContent = isTryAgain ? '¡Tienes otra oportunidad!' : prize;
+
+      // --- NUEVO: CALCULAR Y MOSTRAR FECHA Y HORA ---
+      const dateEl = document.getElementById('prize-date');
+      if (dateEl) {
+          if (isTryAgain) {
+              // Si es "Otro intento", no mostramos fecha para no ensuciar
+              dateEl.style.display = 'none';
+          } else {
+              // Si es un premio real, mostramos la fecha
+              dateEl.style.display = 'block';
+              const now = new Date();
+              // Formateamos para que quede DD/MM/AAAA, HH:MM
+              const day = String(now.getDate()).padStart(2, '0');
+              const month = String(now.getMonth() + 1).padStart(2, '0');
+              const year = now.getFullYear();
+              const hours = String(now.getHours()).padStart(2, '0');
+              const minutes = String(now.getMinutes()).padStart(2, '0');
+              
+              dateEl.textContent = `Reclamado: ${day}/${month}/${year}, ${hours}:${minutes}`;
+          }
+      }
+      // ---------------------------------------------
+
+      // 2. Controlar botones (resto de tu código sigue igual)
+      if (isTryAgain) {
+             
 
       // Botones
       if (isTryAgain) {
