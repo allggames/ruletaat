@@ -570,6 +570,7 @@
         // Mostrar el modal
         if (modal) modal.classList.remove('hidden');
         isSpinning = false;
+      }
 
       // UI listeners
       if (spinBtn) spinBtn.addEventListener('click', spin);
