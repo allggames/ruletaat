@@ -16,15 +16,15 @@
   // El primero lo dejé vacío porque no pusiste uno en tu lista, 
   // pero puedes poner "⭐" o lo que gustes entre las comillas.
   const emojis = [
-    "",           // Para PREMIO A ELECCIÓN
-    "💰",         // Para 3000 FICHAS
-    "🎁",         // Para PREMIO SORPRESA
-    "⚡",         // Para 100% BONO DOBLE
-    "🔥",         // Para 200% BONO DOBLE
-    "👀",         // Para OTRO INTENTO
-    "✨",         // Para 150% BONO DOBLE
-    "💰"          // Para 1500 FICHAS
-  ];
+    "🌟", // Para PREMIO A ELECCIÓN
+    "🔱", // Para 3000 FICHAS
+    "🎁", // Para PREMIO SORPRESA
+    "⚡", // Para 100% BONO DOBLE
+    "🔥", // Para 200% BONO DOBLE
+    "👀", // Para OTRO INTENTO
+    "✨", // Para 150% BONO DOBLE
+    "💰", // Para 1500 FICHAS
+   ];
 
   // Palette: tonos de naranja distintos (cada segmento)
   const orangeTones = [
