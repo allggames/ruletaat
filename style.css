@@ -10,22 +10,62 @@
   --dark-orange-2: #9b3d00;
 }
 
+/* Reset y base */
 *{box-sizing:border-box}
 html,body{height:100%}
+
+/* --- Fondo estilo "casino" en tonos naranjas --- */
 body{
   margin:0;
   font-family: 'Lexend', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  /* fondo degradé naranja */
-  background: radial-gradient(1200px 700px at 10% 10%, rgba(255,195,130,0.18), transparent 10%),
-              radial-gradient(1000px 600px at 90% 90%, rgba(255,140,60,0.12), transparent 8%),
-              linear-gradient(180deg, #ffd89b 0%, #ff7a00 55%, #ff5a00 100%);
-  color:#fff;
   min-height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
   padding:32px;
+  color:#fff;
+  position:relative;
   overflow:hidden;
+
+  /* Base vertical con centro iluminado y bordes más oscuros */
+  background-color: var(--bg2);
+  background-image:
+    radial-gradient(1200px 700px at 50% 30%, rgba(255,230,170,0.28), transparent 18%),
+    linear-gradient(180deg, #ffd89b 0%, #ffb26b 40%, #ff7a00 70%, #ff4a00 100%);
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+/* Sunburst sutil (rayos) */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  background: repeating-conic-gradient(
+    from -90deg at 50% 30%,
+    rgba(255,255,255,0.06) 0deg 6deg,
+    rgba(255,255,255,0) 6deg 12deg
+  );
+  mix-blend-mode: overlay;
+  opacity:0.14;
+  filter: blur(6px);
+}
+
+/* Viñeta / brillo central para profundidad */
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255,235,180,0.14) 0%, rgba(255,200,120,0.06) 20%, transparent 40%),
+    radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,0.18) 100%);
+  mix-blend-mode: multiply;
+  opacity:1;
+  filter: saturate(1.02);
 }
 
 /* floating emoji decorations */
@@ -212,11 +252,11 @@ canvas{
   background-color: #fff3e0;
 }
 
-/* Botón "OTRA VUELTA" (Verde brillante) */
+/* Botón "OTRA VUELTA" (Dorado visible) */
 #try-again-btn {
   background-color: #ffc107; /* Dorado */
   color: #000;            /* Texto negro */
-  border: 2px solid #1e7e34;
+  border: 2px solid #b57f00;
   padding: 10px 25px;
   font-size: 16px;
   font-weight: bold;
@@ -227,11 +267,9 @@ canvas{
   display: none; /* Oculto por defecto hasta que JS lo active */
 }
 #try-again-btn:hover {
-  background-color: #34d058;
-  transform: scale(1.05);
+  background-color: #ffda6a;
+  transform: scale(1.03);
 }
-
-/* --- FIN MODAL STYLES --- */
 
 /* confetti canvas */
 .confetti-canvas{
@@ -249,4 +287,8 @@ canvas{
   :root{ --size: 360px; }
   .floating-icons .float{ display:none; }
   .spin-btn{ padding:10px 16px; }
+
+  /* Reduce sunburst/blur on small screens to improve performance */
+  body::before { opacity: 0.08; filter: blur(4px); }
+  body::after { opacity: 0.8; }
 }
