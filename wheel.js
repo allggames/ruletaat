@@ -334,7 +334,7 @@
           // Tamaño: Le pasamos '32' como último parámetro para que el emoji sea grande.
         const emojiRadius = segOuter - 55; 
           // Le pasamos '40' como tamaño para que se vea grande y bonito
-          drawEmojiCentered(emojis[i], start, end, emojiRadius, 40);
+          drawEmojiCentered(emojis[i], start, end, emojiRadius, 30);
         }
 
         // Lights around rim
