@@ -6,7 +6,7 @@
   --bg3: #ffbe6b;
   --gold-1: #f6c24a;
   --gold-2: #d99b2a;
-  --dark-orange-1: #7a2b00; /* very dark orange for pointer/button */
+  --dark-orange-1: #7a2b00;
   --dark-orange-2: #9b3d00;
 }
 
@@ -14,17 +14,17 @@
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 
-/* --- CONFIGURACIÓN PRINCIPAL DEL CUERPO (Centrado de la Ruleta) --- */
+/* --- CONFIGURACIÓN PRINCIPAL DEL CUERPO --- */
 body {
   margin: 0;
   font-family: 'Lexend', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   min-height: 100vh;
   
-  /* ESTO ES LO QUE CENTRA LA RULETA: */
+  /* ESTO ES LO QUE CENTRA LA RULETA */
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-direction: column; /* Asegura orden vertical */
+  flex-direction: column; 
   
   padding: 32px;
   color: #fff;
@@ -78,7 +78,7 @@ body::after {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 1; /* Encima del fondo, detrás de la ruleta */
+  z-index: 1;
 }
 .floating-icons .float {
   position: absolute;
@@ -112,7 +112,7 @@ body::after {
   max-width: 980px;
   text-align: center;
   position: relative;
-  z-index: 5; /* Por encima de los iconos flotantes */
+  z-index: 5;
 }
 
 h1 {
@@ -270,18 +270,31 @@ canvas {
 }
 
 /* =========================================
-   ESTILOS DE PANTALLA DE CARGA (CORREGIDO)
+   ESTILOS DE PANTALLA DE CARGA (CENTRADO TOTAL)
    ========================================= */
 #loading-screen {
   position: fixed;
-  inset: 0;
+  /* Usamos coordenadas explícitas para mayor seguridad */
+  top: 0;
+  left: 0;
+  width: 100%;
+  
+  /* 100dvh es clave para móviles (ignora la barra de navegación) */
+  height: 100dvh; 
+  min-height: 100vh; /* Fallback */
+
   background: linear-gradient(180deg, #ffb26b 0%, #ff7a00 100%);
   z-index: 99999;
+
+  /* FLEXBOX EN COLUMNA PARA CENTRAR EL CONTENIDO */
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column; 
+  align-items: center;    /* Centra horizontalmente */
+  justify-content: center; /* Centra verticalmente */
+
   overflow: hidden;
   transition: opacity 0.6s ease-out, visibility 0.6s;
+  margin: 0; padding: 0;
 }
 
 #loading-screen.fade-out {
@@ -290,7 +303,7 @@ canvas {
   pointer-events: none;
 }
 
-/* Contenedor de iconos de fondo (PARA QUE SEAN ALEATORIOS) */
+/* Fondo animado (Tridentes) */
 .loading-bg-icons {
   position: absolute;
   inset: 0;
@@ -299,15 +312,13 @@ canvas {
   pointer-events: none;
 }
 
-/* Estilo individual del tridente generado por JS */
 .loading-bg-icons span {
-  position: absolute; /* CLAVE para que el JS los pueda mover random */
+  position: absolute; 
   display: block;
   font-size: 40px;
-  opacity: 0.08; /* Muy tenue */
+  opacity: 0.08; 
   filter: blur(1px);
   color: #7a2b00;
-  /* Animación de suspensión */
   animation-name: suspendedFloat;
   animation-iteration-count: infinite;
   animation-timing-function: ease-in-out;
@@ -320,12 +331,19 @@ canvas {
   100% { transform: translate(0, 0) rotate(0deg); }
 }
 
+/* CONTENIDO CENTRAL DE CARGA */
 .loading-content {
-  text-align: center;
+  /* AQUÍ ESTÁ LA MAGIA DEL CENTRADO INTERNO */
+  display: flex;
+  flex-direction: column; /* Apila logo, barra y botón */
+  align-items: center;    /* Los alinea al centro horizontal */
+  justify-content: center; 
+  
   position: relative;
   z-index: 2;
   width: 90%;
   max-width: 400px;
+  margin: 0 auto; /* Seguridad extra */
 }
 
 .loading-logo {
@@ -334,6 +352,7 @@ canvas {
   margin-bottom: 30px;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
   animation: pulseLogo 2s infinite ease-in-out;
+  display: block; /* Asegura que la imagen no tenga comportamiento inline extraño */
 }
 @keyframes pulseLogo {
   0%, 100% { transform: scale(1); }
@@ -363,10 +382,40 @@ canvas {
   font-size: 14px;
   font-weight: 300;
   letter-spacing: 1px;
+  text-align: center;
+}
+
+/* Botón para entrar */
+#enter-btn {
+  margin-top: 20px;
+  padding: 15px 40px;
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
+  background: linear-gradient(180deg, #ffca28, #ff6f00);
+  border: 4px solid #fff;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+  font-family: 'Lexend', sans-serif;
+  animation: pulseBtn 1s infinite alternate;
+  text-transform: uppercase;
+  /* Asegura centrado */
+  display: inline-block; 
+  align-self: center;
+}
+
+#enter-btn:active {
+  transform: scale(0.95);
+}
+
+@keyframes pulseBtn {
+  from { transform: scale(1); }
+  to { transform: scale(1.1); }
 }
 
 /* =========================================
-   VISTA DE CELULAR (Responsive Mejorado)
+   VISTA DE CELULAR (Responsive)
    ========================================= */
 @media (max-width: 600px) {
   :root {
@@ -408,30 +457,4 @@ canvas {
     width: 85%;
     padding: 20px;
   }
-}
-
-/* Botón para entrar al final de la carga */
-#enter-btn {
-  margin-top: 20px;
-  padding: 15px 40px;
-  font-size: 24px;
-  font-weight: bold;
-  color: white;
-  background: linear-gradient(180deg, #ffca28, #ff6f00);
-  border: 4px solid #fff;
-  border-radius: 50px;
-  cursor: pointer;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-  font-family: 'Lexend', sans-serif;
-  animation: pulseBtn 1s infinite alternate;
-  text-transform: uppercase;
-}
-
-#enter-btn:active {
-  transform: scale(0.95);
-}
-
-@keyframes pulseBtn {
-  from { transform: scale(1); }
-  to { transform: scale(1.1); }
 }
