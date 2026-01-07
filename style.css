@@ -1,4 +1,4 @@
-:root{
+:root {
   --size: 500px;
   --accent: #ffcc00;
   --bg1: #ff9a3c;
@@ -11,40 +11,38 @@
 }
 
 /* Reset y base */
-*{box-sizing:border-box}
-html,body{height:100%}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
 
-/* --- Fondo REAL de Casino teñido de naranja --- */
-/* --- Fondo estilo "casino" claro con rayos --- */
+/* --- CONFIGURACIÓN PRINCIPAL DEL CUERPO (Centrado de la Ruleta) --- */
 body {
   margin: 0;
   font-family: 'Lexend', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   min-height: 100vh;
+  
+  /* ESTO ES LO QUE CENTRA LA RULETA: */
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column; /* Asegura orden vertical */
+  
   padding: 32px;
   color: #fff;
   position: relative;
   overflow: hidden;
 
-  /* Color de fondo base naranja claro */
+  /* Fondo del juego */
   background-color: #ffab40;
-
-  /* Imagen de fondo y un degradado naranja suave encima */
   background-image: 
     linear-gradient(to bottom, rgba(255, 220, 150, 0.4), rgba(255, 160, 50, 0.5)),
     url('fondo-nuevo.png');
-
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  
-  /* Mezclamos para teñir y aclarar la imagen */
   background-blend-mode: soft-light;
 }
 
-/* Sunburst (rayos de sol) más marcados */
+/* Sunburst (rayos de sol) */
 body::before {
   content: "";
   position: fixed;
@@ -57,11 +55,11 @@ body::before {
     rgba(255, 255, 255, 0) 5deg 10deg
   );
   mix-blend-mode: overlay;
-  opacity: 0.6; /* Más visibles */
+  opacity: 0.6;
   filter: blur(4px);
 }
 
-/* Brillo central y viñeta suave */
+/* Brillo central */
 body::after {
   content: "";
   position: fixed;
@@ -75,26 +73,28 @@ body::after {
   opacity: 0.8;
 }
 
-/* floating emoji decorations */
+/* --- EMOJIS FLOTANTES (FONDO DEL JUEGO) --- */
 .floating-icons {
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:1;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1; /* Encima del fondo, detrás de la ruleta */
 }
-.floating-icons .float{
-  position:absolute;
-  font-size:28px;
-  opacity:0.92;
-  transform-origin:center;
-  filter:drop-shadow(0 6px 10px rgba(0,0,0,0.25));
+.floating-icons .float {
+  position: absolute;
+  font-size: 28px;
+  opacity: 0.92;
+  transform-origin: center;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,0.25));
 }
-.floating-icons .f1{ left:8%; top:18%; animation:float1 9s ease-in-out infinite; }
-.floating-icons .f2{ left:22%; top:68%; animation:float2 12s ease-in-out infinite; font-size:22px }
-.floating-icons .f3{ right:12%; top:22%; animation:float3 10s ease-in-out infinite; font-size:30px }
-.floating-icons .f4{ left:45%; top:6%; animation:float2 14s linear infinite; opacity:0.85 }
-.floating-icons .f5{ right:26%; top:66%; animation:float1 11s ease-in-out infinite; transform:scale(1.2) }
-.floating-icons .f6{ left:62%; top:36%; animation:float3 13s ease-in-out infinite; }
+
+/* Posiciones de los iconos flotantes */
+.floating-icons .f1 { left:8%; top:18%; animation:float1 9s ease-in-out infinite; }
+.floating-icons .f2 { left:22%; top:68%; animation:float2 12s ease-in-out infinite; font-size:22px }
+.floating-icons .f3 { right:12%; top:22%; animation:float3 10s ease-in-out infinite; font-size:30px }
+.floating-icons .f4 { left:45%; top:6%; animation:float2 14s linear infinite; opacity:0.85 }
+.floating-icons .f5 { right:26%; top:66%; animation:float1 11s ease-in-out infinite; transform:scale(1.2) }
+.floating-icons .f6 { left:62%; top:36%; animation:float3 13s ease-in-out infinite; }
 .floating-icons .f7 { left: 15%; top: 85%; animation: float3 11s ease-in-out infinite; font-size: 24px; opacity: 0.7; }
 .floating-icons .f8 { right: 35%; top: 10%; animation: float1 13s ease-in-out infinite; font-size: 20px; opacity: 0.8; }
 .floating-icons .f9 { right: 5%; top: 50%; animation: float2 10s linear infinite; font-size: 32px; }
@@ -102,143 +102,116 @@ body::after {
 .floating-icons .f11 { left: 88%; top: 25%; animation: float1 14s ease-in-out infinite; font-size: 26px; opacity: 0.85; }
 .floating-icons .f12 { right: 60%; top: 80%; animation: float2 12s ease-in-out infinite; transform: scale(1.1); }
 
-@keyframes float1 {
-  0% { transform: translateY(0) rotate(0deg) }
-  50% { transform: translateY(-22px) rotate(12deg) }
-  100% { transform: translateY(0) rotate(0deg) }
-}
-@keyframes float2 {
-  0% { transform: translateY(0) rotate(-6deg) }
-  50% { transform: translateY(-36px) rotate(8deg) }
-  100% { transform: translateY(0) rotate(-6deg) }
-}
-@keyframes float3 {
-  0% { transform: translateY(0) rotate(3deg) }
-  50% { transform: translateY(-28px) rotate(-10deg) }
-  100% { transform: translateY(0) rotate(3deg) }
+@keyframes float1 { 0% { transform: translateY(0) rotate(0deg) } 50% { transform: translateY(-22px) rotate(12deg) } 100% { transform: translateY(0) rotate(0deg) } }
+@keyframes float2 { 0% { transform: translateY(0) rotate(-6deg) } 50% { transform: translateY(-36px) rotate(8deg) } 100% { transform: translateY(0) rotate(-6deg) } }
+@keyframes float3 { 0% { transform: translateY(0) rotate(3deg) } 50% { transform: translateY(-28px) rotate(-10deg) } 100% { transform: translateY(0) rotate(3deg) } }
+
+/* --- CONTENEDOR PRINCIPAL --- */
+.container {
+  width: 100%;
+  max-width: 980px;
+  text-align: center;
+  position: relative;
+  z-index: 5; /* Por encima de los iconos flotantes */
 }
 
-.container{
-  width:100%;
-  max-width:980px;
-  text-align:center;
-  position:relative;
-  z-index:5; /* above floating icons */
-}
-
-/* Título principal más grande y en naranja oscuro */
 h1 {
-  margin: 0 0 16px 0;      /* Un poco más de espacio abajo */
-  color: #d35400;          /* Color Naranja Oscuro intenso */
-  font-size: 54px;         /* Mucho más grande (antes era 36px) */
-  font-weight: 800;        /* Letra bien gruesa */
-  letter-spacing: 1px;     /* Espaciado entre letras */
-  text-transform: uppercase; /* Opcional: Todo en mayúsculas para más impacto */
-  
-  /* Sombra oscura suave para que se separe del fondo y se lea perfecto */
+  margin: 0 0 16px 0;
+  color: #d35400;
+  font-size: 54px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* Layout wheel */
-.wheel-area{
-  display:flex;
-  justify-content:center;
-  margin:12px 0 18px 0;
+/* --- RULETA --- */
+.wheel-area {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0 18px 0;
 }
 
-/* Marco estático con sombra sutil */
-.wheel-outer{
-  width:var(--size);
-  height:var(--size);
-  position:relative;
-  border-radius:50%;
+.wheel-outer {
+  width: var(--size);
+  height: var(--size);
+  position: relative;
+  border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.02), transparent 10%);
-  box-shadow:
-    0 10px 40px rgba(0,0,0,0.35),
-    inset 0 -6px 30px rgba(0,0,0,0.20);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:3;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.35), inset 0 -6px 30px rgba(0,0,0,0.20);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
 }
 
-/* rotor sigue girando - canvas ocupa todo el rotor */
-.wheel-rotor{
-  width:92%;
-  height:92%;
-  border-radius:50%;
+.wheel-rotor {
+  width: 92%;
+  height: 92%;
+  border-radius: 50%;
   will-change: transform;
   transform-origin: 50% 50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-canvas{
-  width:100%;
-  height:100%;
-  display:block;
-  border-radius:50%;
+
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
   box-shadow: 0 10px 18px rgba(0,0,0,0.25), inset 0 4px 10px rgba(255,255,255,0.02);
 }
 
-/* pointer (teardrop) - now dark orange */
-.pointer{
-  position:absolute;
-  left:50%;
-  top:-6px; /* sink tip slightly into rim */
-  transform:translateX(-50%) translateY(0);
-  z-index:6;
-  pointer-events:none;
+/* Puntero */
+.pointer {
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  transform: translateX(-50%) translateY(0);
+  z-index: 6;
+  pointer-events: none;
   filter: drop-shadow(0 6px 14px rgba(0,0,0,0.35));
   transition: transform 220ms cubic-bezier(.2,.9,.3,1);
 }
 .pointer.bounce { animation: pointerBounce 700ms cubic-bezier(.2,.9,.3,1); }
 
-/* Button - dark orange tones */
-.spin-btn{
+/* Botón Girar */
+.spin-btn {
   background: linear-gradient(180deg, var(--dark-orange-2), var(--dark-orange-1));
-  color:white;
-  border:none;
-  padding:12px 22px;
-  font-size:16px;
-  border-radius:12px;
-  cursor:pointer;
+  color: white;
+  border: none;
+  padding: 12px 22px;
+  font-size: 16px;
+  border-radius: 12px;
+  cursor: pointer;
   box-shadow: 0 8px 18px rgba(123,41,0,0.28);
-  z-index:6;
+  z-index: 6;
 }
-.spin-btn:disabled{
-  opacity:0.5;
-  cursor:not-allowed;
+.spin-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-/* --- MODAL STYLES (ACTUALIZADO) --- */
-.modal{
-  position:fixed;
-  left:0;right:0;top:0;bottom:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:rgba(2,6,23,0.45);
-  z-index:999;
+/* --- MODAL DE PREMIO --- */
+.modal {
+  position: fixed;
+  left: 0; right: 0; top: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2,6,23,0.45);
+  z-index: 999;
 }
-.modal.hidden{ display:none }
+.modal.hidden { display: none; }
 
 .modal-content {
-  /* 1. Definimos DOS fondos: el degradado naranja Y la imagen de textura */
-  /* IMPORTANTE: Cambia 'textura-papel.png' por el nombre real si le pusiste otro */
   background-image: linear-gradient(135deg, #d35400e6, #a04000e6), url('textura-papel.png');
-
-  /* 2. Decimos cómo se comporta cada fondo */
-  /* El degradado no se repite, la textura sí se repite (para cubrir todo) */
   background-repeat: no-repeat, repeat;
-  background-size: cover, auto; /* El degradado cubre, la textura tamaño real */
+  background-size: cover, auto;
   background-position: center, center;
-
-  /* 3. LA MAGIA: Mezclamos los fondos */
-  /* 'multiply' hará que la textura blanca se oscurezca con el naranja */
   background-blend-mode: multiply;
-
-  /* --- El resto de estilos que ya tenías siguen igual --- */
   color: #ffffff;
   border: 4px solid #ffd700;
   padding: 30px;
@@ -249,10 +222,9 @@ canvas{
   width: 90%;
 }
 
-.modal-content h2{ margin-top:0; margin-bottom:6px; font-size:18px; }
-.modal-actions{ display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap: wrap; }
+.modal-content h2 { margin-top: 0; margin-bottom: 6px; font-size: 18px; }
+.modal-actions { display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
 
-/* Botón "ACEPTAR" (Blanco con letras naranjas) */
 #close-modal {
   background-color: #ffffff;
   color: #d35400;
@@ -264,14 +236,11 @@ canvas{
   margin-top: 15px;
   font-size: 16px;
 }
-#close-modal:hover {
-  background-color: #fff3e0;
-}
+#close-modal:hover { background-color: #fff3e0; }
 
-/* Botón "OTRA VUELTA" (Dorado visible) */
 #try-again-btn {
-  background-color: #ffc107; /* Dorado */
-  color: #000;            /* Texto negro */
+  background-color: #ffc107;
+  color: #000;
   border: 2px solid #b57f00;
   padding: 10px 25px;
   font-size: 16px;
@@ -280,154 +249,77 @@ canvas{
   cursor: pointer;
   margin: 10px;
   transition: transform 0.2s, background-color 0.2s;
-  display: none; /* Oculto por defecto hasta que JS lo active */
+  display: none;
 }
-#try-again-btn:hover {
-  background-color: #ffda6a;
-  transform: scale(1.03);
-}
+#try-again-btn:hover { background-color: #ffda6a; transform: scale(1.03); }
 
-/* confetti canvas */
-.confetti-canvas{
-  position:fixed;
-  left:0;
-  top:0;
-  width:100vw;
-  height:100vh;
-  pointer-events:none;
-  z-index:50;
-}
-
-/* responsive: smaller wheel */
-@media (max-width:520px){
-  :root{ --size: 360px; }
-  .floating-icons .float{ display:none; }
-  .spin-btn{ padding:10px 16px; }
-
-  /* Reduce sunburst/blur on small screens to improve performance */
-  body::before { opacity: 0.08; filter: blur(4px); }
-  body::after { opacity: 0.8; }
-}
-
-/* Estilo para la fecha y hora del reclamo */
 .prize-date {
-  font-size: 13px;       /* Letra pequeña */
-  margin-top: 4px;       /* Pegado al premio */
-  margin-bottom: 20px;   /* Separado de los botones */
-  color: rgba(255, 255, 255, 0.85); /* Blanco con un poco de transparencia */
-  font-weight: 300;      /* Letra fina */
-  font-family: monospace, sans-serif; /* Monospace le da toque técnico/ticket */
+  font-size: 13px;
+  margin-top: 4px;
+  margin-bottom: 20px;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 300;
+  font-family: monospace, sans-serif;
 }
 
-
-/* =========================================
-   VISTA DE CELULAR (Responsive Mejorado)
-   ========================================= */
-@media (max-width: 600px) {
-  
-  :root {
-    /* Tamaño de ruleta seguro para móviles */
-    --size: 340px; 
-  }
-
-  body {
-    padding: 20px 10px; /* Un poco de aire a los costados */
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  /* Rayos de fondo: Los hacemos visibles de nuevo */
-  body::before { 
-    opacity: 0.4 !important; /* Estaba en 0.08, muy bajo. Ahora 0.4 se verá bien */
-    filter: blur(2px) !important; 
-  }
-
-  /* Título */
-  h1 {
-    font-size: 32px; 
-    margin-bottom: 20px;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-  }
-
-  /* Íconos flotantes: Ajustamos para que no tapen */
-  .floating-icons .float {
-    transform: scale(0.65) !important;
-    opacity: 0.7;
-  }
-  
-  /* Ocultamos los que estorban en el centro */
-  .floating-icons .f2, .floating-icons .f5, .floating-icons .f9 { display: none; }
-
-  /* Botón más cómodo */
-  .spin-btn {
-    padding: 16px 40px;
-    font-size: 18px;
-    margin-top: 25px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-  }
-
-  /* Cartel de premio */
-  .modal-content {
-    width: 85%;
-    padding: 20px;
-  }
+.confetti-canvas {
+  position: fixed;
+  left: 0; top: 0; width: 100vw; height: 100vh;
+  pointer-events: none;
+  z-index: 50;
 }
 
-
 /* =========================================
-   ESTILOS DE PANTALLA DE CARGA
+   ESTILOS DE PANTALLA DE CARGA (CORREGIDO)
    ========================================= */
 #loading-screen {
   position: fixed;
-  inset: 0; /* Ocupa toda la pantalla */
-  background: linear-gradient(180deg, #ffb26b 0%, #ff7a00 100%); /* Fondo naranja similar al juego */
-  z-index: 99999; /* Por encima de absolutamente todo */
+  inset: 0;
+  background: linear-gradient(180deg, #ffb26b 0%, #ff7a00 100%);
+  z-index: 99999;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  transition: opacity 0.6s ease-out, visibility 0.6s; /* Para el efecto de desvanecer al final */
+  transition: opacity 0.6s ease-out, visibility 0.6s;
 }
 
-/* Clase para ocultarlo suavemente */
 #loading-screen.fade-out {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
 }
 
-/* --- Fondo de Tridentes Tenues --- */
+/* Contenedor de iconos de fondo (PARA QUE SEAN ALEATORIOS) */
 .loading-bg-icons {
   position: absolute;
   inset: 0;
-  z-index: -1; /* Detrás del logo */
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-around;
-  align-content: space-around;
-  pointer-events: none;
-  opacity: 0.12; /* MUY TENUE, casi transparente */
-  filter: blur(1px);
+  z-index: -1;
   overflow: hidden;
+  pointer-events: none;
 }
 
+/* Estilo individual del tridente generado por JS */
 .loading-bg-icons span {
+  position: absolute; /* CLAVE para que el JS los pueda mover random */
+  display: block;
   font-size: 40px;
-  margin: 20px;
-  /* Animación sutil de flotación para que no sea estático */
-  animation: floatLoading 4s ease-in-out infinite alternate;
+  opacity: 0.08; /* Muy tenue */
+  filter: blur(1px);
+  color: #7a2b00;
+  /* Animación de suspensión */
+  animation-name: suspendedFloat;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
 }
 
-/* Pequeña variación en la animación de los tridentes */
-.loading-bg-icons span:nth-child(even) { animation-duration: 5s; animation-delay: 1s; font-size: 30px; }
-.loading-bg-icons span:nth-child(3n) { animation-duration: 6s; animation-delay: 0.5s; font-size: 50px; }
-
-@keyframes floatLoading {
-  from { transform: translateY(0) rotate(-5deg); }
-  to { transform: translateY(-15px) rotate(5deg); }
+@keyframes suspendedFloat {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(10px, -15px) rotate(8deg); }
+  66% { transform: translate(-8px, 10px) rotate(-5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
 }
 
-/* --- Contenido Central --- */
 .loading-content {
   text-align: center;
   position: relative;
@@ -436,9 +328,8 @@ canvas{
   max-width: 400px;
 }
 
-/* Logo */
 .loading-logo {
-  max-width: 180px; /* Ajusta este tamaño según tu logo */
+  max-width: 180px;
   height: auto;
   margin-bottom: 30px;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
@@ -449,24 +340,22 @@ canvas{
   50% { transform: scale(1.03); }
 }
 
-/* Barra de Carga (Contenedor gris/oscuro) */
 .loading-bar-container {
   width: 100%;
   height: 20px;
-  background-color: rgba(0, 0, 0, 0.3); /* Fondo oscuro de la barra */
+  background-color: rgba(0, 0, 0, 0.3);
   border-radius: 10px;
   overflow: hidden;
   box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
   margin-bottom: 10px;
 }
 
-/* Barra de Carga (Relleno dorado/naranja) */
 .loading-bar-fill {
   height: 100%;
-  width: 0%; /* Empieza vacía */
-  background: linear-gradient(90deg, #ffd86b, #ff7a00); /* Degradado dorado/naranja */
+  width: 0%;
+  background: linear-gradient(90deg, #ffd86b, #ff7a00);
   border-radius: 10px;
-  transition: width 0.3s ease-out; /* Animación suave al llenarse */
+  transition: width 0.3s ease-out;
 }
 
 .loading-text {
@@ -474,4 +363,49 @@ canvas{
   font-size: 14px;
   font-weight: 300;
   letter-spacing: 1px;
+}
+
+/* =========================================
+   VISTA DE CELULAR (Responsive Mejorado)
+   ========================================= */
+@media (max-width: 600px) {
+  :root {
+    --size: 340px; 
+  }
+
+  body {
+    padding: 20px 10px;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  body::before { 
+    opacity: 0.4 !important;
+    filter: blur(2px) !important; 
+  }
+
+  h1 {
+    font-size: 32px; 
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  }
+
+  .floating-icons .float {
+    transform: scale(0.65) !important;
+    opacity: 0.7;
+  }
+  
+  .floating-icons .f2, .floating-icons .f5, .floating-icons .f9 { display: none; }
+
+  .spin-btn {
+    padding: 16px 40px;
+    font-size: 18px;
+    margin-top: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  }
+
+  .modal-content {
+    width: 85%;
+    padding: 20px;
+  }
 }
