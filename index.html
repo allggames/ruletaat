@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Ruleta de Premios</title>
 
-  <!-- Lexend font -->
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="style.css">
@@ -13,12 +12,7 @@
 <body>
 
   <div id="loading-screen">
-    <div class="loading-bg-icons">
-        <span>🔱</span><span>🔱</span><span>🔱</span><span>🔱</span><span>🔱</span>
-        <span>🔱</span><span>🔱</span><span>🔱</span><span>🔱</span><span>🔱</span>
-        <span>🔱</span><span>🔱</span><span>🔱</span><span>🔱</span><span>🔱</span>
-        <span>🔱</span><span>🔱</span><span>🔱</span><span>🔱</span><span>🔱</span>
-    </div>
+    <div class="loading-bg-icons"></div>
 
     <div class="loading-content">
       <img src="logo.png" alt="Logo del Juego" class="loading-logo">
@@ -29,19 +23,16 @@
       <p class="loading-text">Cargando la suerte...</p>
     </div>
   </div>
-  <div class="floating-icons">
-  
+
   <main class="container">
     <h1>Ruleta de Premios</h1>
 
     <div class="wheel-area">
-      <!-- wheel-outer es el marco estático; wheel-rotor es el que gira -->
       <div id="wheel" class="wheel-outer" aria-hidden="false">
         <div id="wheel-rotor" class="wheel-rotor">
           <canvas id="wheel-canvas" width="500" height="500"></canvas>
         </div>
 
-        <!-- Puntero estilo "teardrop" (apunta hacia el centro) - ahora en naranja oscuro -->
         <svg class="pointer" width="44" height="40" viewBox="0 0 44 40" aria-hidden="true" focusable="false">
           <defs>
             <linearGradient id="gPtr" x1="0" x2="0" y1="0" y2="1">
@@ -64,26 +55,36 @@
       <button id="spin-btn" class="spin-btn">Girar</button>
     </div>
 
-   <!-- Modal premio -->
-<div id="prize-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="prize-title">
-  <div class="modal-content">
-    <h2 id="prize-title">¡Felicidades!</h2>
-    <p id="prize-text"></p>
+    <div id="prize-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="prize-title">
+      <div class="modal-content">
+        <h2 id="prize-title">¡Felicidades!</h2>
+        <p id="prize-text"></p>
 
-    <p id="prize-date" class="prize-date"></p>
+        <p id="prize-date" class="prize-date"></p>
 
-    <div class="modal-actions">
-      <button id="try-again-btn" class="modal-btn">Otro intento</button>
-      <button id="close-modal" class="modal-btn primary">Cerrar</button>
+        <div class="modal-actions">
+          <button id="try-again-btn" class="modal-btn">Otro intento</button>
+          <button id="close-modal" class="modal-btn primary">Cerrar</button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-    
   </main>
 
-  <!-- floating icons -->
-<div class="floating-icons">
-  <span class="float f1">&#127920;</span> <span class="float f2">&#127922;</span> <span class="float f3">&#10024;</span>  <span class="float f4">&#127183;</span> <span class="float f5">&#127920;</span> <span class="float f6">&#127922;</span> <span class="float f7">&#127826;</span> <span class="float f8">&#128142;</span> <span class="float f9">&#128276;</span> <span class="float f10">&#127808;</span> <span class="float f11">&#127819;</span> <span class="float f12">&#128176;</span> </div>
+  <div class="floating-icons">
+    <span class="float f1">&#127920;</span> 
+    <span class="float f2">&#127922;</span> 
+    <span class="float f3">&#10024;</span>  
+    <span class="float f4">&#127183;</span> 
+    <span class="float f5">&#127920;</span> 
+    <span class="float f6">&#127922;</span> 
+    
+    <span class="float f7">&#127826;</span> 
+    <span class="float f8">&#128142;</span> 
+    <span class="float f9">&#128276;</span> 
+    <span class="float f10">&#127808;</span> 
+    <span class="float f11">&#127819;</span> 
+    <span class="float f12">&#128176;</span> 
+  </div>
 
   <script src="wheel.js"></script>
 </body>
