@@ -321,56 +321,54 @@ canvas{
 
 
 /* =========================================
-   VISTA DE CELULAR (Responsive)
+   VISTA DE CELULAR (Responsive Mejorado)
    ========================================= */
 @media (max-width: 600px) {
   
   :root {
-    /* 1. Achicamos la ruleta para que entre en vertical */
-    /* 340px es un tamaño seguro para casi todos los móviles */
+    /* Tamaño de ruleta seguro para móviles */
     --size: 340px; 
   }
 
   body {
-    padding: 15px; /* Menos relleno en los bordes */
-    flex-direction: column; /* Asegura que todo fluya verticalmente */
+    padding: 20px 10px; /* Un poco de aire a los costados */
+    flex-direction: column;
+    justify-content: center;
   }
 
-  /* 2. Título más pequeño para que no se corte */
+  /* Rayos de fondo: Los hacemos visibles de nuevo */
+  body::before { 
+    opacity: 0.4 !important; /* Estaba en 0.08, muy bajo. Ahora 0.4 se verá bien */
+    filter: blur(2px) !important; 
+  }
+
+  /* Título */
   h1 {
     font-size: 32px; 
-    margin-bottom: 30px; /* Separarlo un poco más de la ruleta */
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
   }
 
-  /* 3. Íconos flotantes: Los hacemos más chicos y ocultamos algunos
-     para que no tapen la ruleta en pantallas pequeñas */
+  /* Íconos flotantes: Ajustamos para que no tapen */
   .floating-icons .float {
-    transform: scale(0.6) !important; /* Reducir tamaño al 60% */
-    opacity: 0.6; /* Un poco más transparentes */
+    transform: scale(0.65) !important;
+    opacity: 0.7;
   }
   
-  /* Ocultamos los que quedan muy al medio o molestan en móvil */
-  .floating-icons .f2, 
-  .floating-icons .f5, 
-  .floating-icons .f9 {
-    display: none; 
-  }
+  /* Ocultamos los que estorban en el centro */
+  .floating-icons .f2, .floating-icons .f5, .floating-icons .f9 { display: none; }
 
-  /* 4. Botón de Girar más grande (mejor para el dedo) */
+  /* Botón más cómodo */
   .spin-btn {
     padding: 16px 40px;
     font-size: 18px;
-    margin-top: 20px;
+    margin-top: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
   }
 
-  /* 5. Ajustes del Cartel (Modal) */
+  /* Cartel de premio */
   .modal-content {
-    width: 90%;       /* Que ocupe casi todo el ancho */
-    max-width: 340px; 
+    width: 85%;
     padding: 20px;
-  }
-  
-  .modal-content h2 {
-    font-size: 24px;
   }
 }
