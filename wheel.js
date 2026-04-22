@@ -311,13 +311,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!isTryAgain) { lockForToday(); savePrizeDetails(prize, timeString); }
 
+        // --- ACÁ EMPIEZAN LOS CAMBIOS DE BOTONES ---
         if (isTryAgain) {
-            if (tryAgainBtn) { tryAgainBtn.style.display = 'inline-block'; tryAgainBtn.disabled = false; tryAgainBtn.onclick = () => { modal.classList.add('hidden'); setTimeout(spin, 200); }; }
-            if (closeModal) closeModal.style.display = 'none';
+            if (tryAgainBtn) { 
+                tryAgainBtn.style.display = 'inline-block'; 
+                tryAgainBtn.disabled = false; 
+                tryAgainBtn.onclick = () => { modal.classList.add('hidden'); setTimeout(spin, 200); }; 
+            }
+            if (closeModal) {
+                closeModal.style.display = 'none';
+                // Si es "Otro Intento" y lo cierran por X motivo, que vuelva a la ruleta
+                closeModal.onclick = () => modal.classList.add('hidden'); 
+            }
         } else {
             if (tryAgainBtn) tryAgainBtn.style.display = 'none';
-            if (closeModal) { closeModal.style.display = 'inline-block'; closeModal.textContent = 'ACEPTAR'; }
+            if (closeModal) { 
+                closeModal.style.display = 'inline-block'; 
+                
+                // Le damos el estilo de "Reclamar" verde de Casino Atenea
+                closeModal.innerHTML = 'RECLAMAR PREMIO 📸<br><small style="font-size:0.7em;font-weight:normal;">Capturá y tocá acá</small>'; 
+                closeModal.style.backgroundColor = '#073b12'; 
+                closeModal.style.color = '#ffffff';
+                closeModal.style.border = '2px solid #fff';
+                closeModal.style.padding = '12px 20px';
+                closeModal.style.lineHeight = '1.2';
+                
+                // LA REDIRECCIÓN
+                closeModal.onclick = () => {
+                    // Manda directo al chat
+                    window.location.href = "https://www.casinoatenea.com/?open=true";
+                };
+            }
         }
+        // --- FIN DE CAMBIOS DE BOTONES ---
+
         if (modal) modal.classList.remove('hidden');
         isSpinning = false;
         if (isTryAgain && spinBtn) spinBtn.disabled = false;
@@ -338,7 +365,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
-    if (closeModal) closeModal.addEventListener('click', () => modal.classList.add('hidden'));
+    // --- ESTA LÍNEA DEBE ESTAR COMENTADA O BORRADA ---
+    // if (closeModal) closeModal.addEventListener('click', () => modal.classList.add('hidden')); 
+    // ---------------------------------------------------
+    
     setInterval(() => { lightsOn = !lightsOn; drawWheel(); }, 500);
     if (document.fonts) document.fonts.ready.then(drawWheel);
   });
